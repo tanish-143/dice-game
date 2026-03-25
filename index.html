@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dice Oracle — Advanced Prediction Engine</title>
+<style>
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-card: #1a2236;
+  --bg-card-hover: #1f2a42;
+  --border: #2a3550;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #f59e0b;
+  --accent-glow: rgba(245, 158, 11, 0.3);
+  --green: #22c55e;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --cyan: #06b6d4;
+  --pink: #ec4899;
+  --orange: #f97316;
+  --tab-active: #f59e0b;
+  --radius: 8px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+.header {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.header h1 {
+  font-size: 1.4rem; font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  display: flex; align-items: center; gap: 8px;
+}
+.header-stats {
+  display: flex; gap: 16px; font-size: 0.85rem;
+}
+.header-stats .stat { display: flex; align-items: center; gap: 4px; }
+.header-stats .stat-val { color: var(--accent); font-weight: 600; }
+.tab-bar {
+  display: flex; background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.tab-btn {
+  padding: 12px 20px; border: none; background: none;
+  color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+.tab-btn:hover { color: var(--text-secondary); background: var(--bg-card); }
+.tab-btn.active {
+  color: var(--accent); border-bottom-color: var(--accent);
+  background: rgba(245, 158, 11, 0.05);
+}
+.tab-content { display: none; padding: 20px; max-width: 1400px; margin: 0 auto; }
+.tab-content.active { display: block; }
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.card-value { font-size: 1.8rem; font-weight: 700; }
+.input-section {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+}
+.dice-input-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.dice-input-group {
+  display: flex; align-items: center; gap: 8px;
+}
+.dice-input {
+  width: 60px; height: 60px; text-align: center; font-size: 1.5rem; font-weight: 700;
+  background: var(--bg-primary); border: 2px solid var(--border);
+  color: var(--text-primary); border-radius: var(--radius);
+  outline: none; transition: border-color 0.2s;
+}
+.dice-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.dice-label { font-size: 0.75rem; color: var(--text-muted); text-align: center; }
+.btn {
+  padding: 10px 24px; border: none; border-radius: var(--radius);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--orange));
+  color: #000;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px var(--accent-glow); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg-card-hover); }
+.btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+table {
+  width: 100%; border-collapse: collapse; font-size: 0.85rem;
+}
+th, td {
+  padding: 10px 12px; text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  color: var(--text-muted); font-weight: 600;
+  text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;
+}
+td { color: var(--text-secondary); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 12px;
+  font-size: 0.75rem; font-weight: 600;
+}
+.badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+.badge-amber { background: rgba(245,158,11,0.15); color: var(--accent); }
+.badge-purple { background: rgba(168,85,247,0.15); color: var(--purple); }
+.progress-bar {
+  height: 8px; background: var(--bg-primary); border-radius: 4px; overflow: hidden;
+}
+.progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.signal-meter {
+  display: flex; align-items: center; gap: 8px;
+}
+.signal-bar {
+  flex: 1; height: 20px; background: var(--bg-primary);
+  border-radius: 4px; overflow: hidden; position: relative;
+}
+.signal-fill {
+  height: 100%; border-radius: 4px; transition: width 0.4s;
+  position: absolute; top: 0;
+}
+.signal-label { font-size: 0.75rem; min-width: 45px; text-align: right; }
+.history-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+}
+.history-item {
+  background: var(--bg-primary); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px; text-align: center; font-size: 0.8rem;
+}
+.history-item .roll-num { color: var(--text-muted); font-size: 0.7rem; }
+.history-item .roll-vals { font-weight: 600; color: var(--accent); }
+.prediction-box {
+  background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.08));
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: var(--radius); padding: 24px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.prediction-box::before {
+  content: ''; position: absolute; top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle, rgba(245,158,11,0.05) 0%, transparent 70%);
+  animation: pulse 3s infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.prediction-number {
+  font-size: 4rem; font-weight: 800; color: var(--accent);
+  text-shadow: 0 0 30px var(--accent-glow);
+  position: relative;
+}
+.confidence-ring {
+  width: 120px; height: 120px; margin: 0 auto 12px;
+  position: relative; display: flex; align-items: center; justify-content: center;
+}
+.confidence-ring svg { position: absolute; transform: rotate(-90deg); }
+.confidence-ring .value { position: relative; font-size: 1.2rem; font-weight: 700; }
+.streak { display: inline-flex; align-items: center; gap: 4px; }
+.streak.hot { color: var(--green); }
+.streak.cold { color: var(--red); }
+.number-tile {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 16px; border-radius: var(--radius);
+  background: var(--bg-primary); border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.number-tile:hover { border-color: var(--accent); }
+.number-tile .num {
+  font-size: 2rem; font-weight: 800; color: var(--accent);
+}
+.number-tile .freq { font-size: 0.85rem; color: var(--text-secondary); }
+.number-tile .pct { font-size: 0.75rem; color: var(--text-muted); }
+.session-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px; background: var(--bg-primary);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.session-info { flex: 1; }
+.session-name { font-weight: 600; color: var(--text-primary); }
+.session-meta { font-size: 0.8rem; color: var(--text-muted); }
+.session-actions { display: flex; gap: 6px; }
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; max-width: 500px;
+  width: 90%; max-height: 80vh; overflow-y: auto;
+}
+.modal h3 { margin-bottom: 16px; }
+.heatmap-row { display: flex; gap: 2px; margin-bottom: 2px; }
+.heatmap-cell {
+  width: 40px; height: 32px; display: flex; align-items: center;
+  justify-content: center; border-radius: 3px; font-size: 0.7rem;
+  font-weight: 600;
+}
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-accent { color: var(--accent); }
+.text-blue { color: var(--blue); }
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 0.85rem; }
+.text-xs { font-size: 0.75rem; }
+.fw-700 { font-weight: 700; }
+.sum-bar-container { margin-bottom: 6px; }
+.sum-bar-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px; }
+.sum-bar { height: 20px; background: var(--bg-primary); border-radius: 4px; overflow: hidden; }
+.sum-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; display: flex; align-items: center; padding-left: 6px; font-size: 0.7rem; font-weight: 600; color: #000; }
+@media (max-width: 768px) {
+  .header { padding: 12px 16px; }
+  .header h1 { font-size: 1.1rem; }
+  .tab-btn { padding: 10px 14px; font-size: 0.8rem; }
+  .tab-content { padding: 12px; }
+  .dice-input { width: 50px; height: 50px; font-size: 1.2rem; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .prediction-number { font-size: 3rem; }
+}
+@media (max-width: 480px) {
+  .header-stats { display: none; }
+  .dice-input-row { gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎲 Dice Oracle</h1>
+  <div class="header-stats">
+    <div class="stat">Rolls: <span class="stat-val" id="hdr-rolls">0</span></div>
+    <div class="stat">Accuracy: <span class="stat-val" id="hdr-accuracy">—</span></div>
+    <div class="stat">Streak: <span class="stat-val" id="hdr-streak">0</span></div>
+    <div class="stat">Session: <span class="stat-val" id="hdr-session">Default</span></div>
+  </div>
+</div>
+
+<div class="tab-bar" id="tab-bar">
+  <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+  <button class="tab-btn" data-tab="numbers">Number Analysis</button>
+  <button class="tab-btn" data-tab="patterns">Pattern Engine</button>
+  <button class="tab-btn" data-tab="signals">Math Signals</button>
+  <button class="tab-btn" data-tab="sums">Sum Analysis</button>
+  <button class="tab-btn" data-tab="stats">Statistics</button>
+  <button class="tab-btn" data-tab="prediction">Prediction Engine</button>
+</div>
+
+<!-- ===== DASHBOARD TAB ===== -->
+<div class="tab-content active" id="tab-dashboard">
+  <div class="input-section">
+    <div class="flex-between mb-12">
+      <span style="font-weight:600;">Enter Roll</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="undoLast()">↩ Undo</button>
+        <button class="btn btn-secondary btn-sm" onclick="showSessionModal()">📁 Sessions</button>
+      </div>
+    </div>
+    <div class="dice-input-row">
+      <div class="dice-input-group">
+        <div>
+          <input type="number" class="dice-input" id="d1" min="1" max="6" placeholder="·">
+          <div class="dice-label">Die 1</div>
+        </div>
+        <div>
+          <input type="number" class="dice-input" id="d2" min="1" max="6" placeholder="·">
+          <div class="dice-label">Die 2</div>
+        </div>
+        <div>
+          <input type="number" class="dice-input" id="d3" min="1" max="6" placeholder="·">
+          <div class="dice-label">Die 3</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-add" onclick="addRoll()">Add Roll</button>
+      <button class="btn btn-secondary btn-sm" onclick="randomRoll()">🎲 Random</button>
+    </div>
+  </div>
+
+  <div class="grid grid-4 mb-16">
+    <div class="card">
+      <div class="card-title">Total Rolls</div>
+      <div class="card-value" id="dash-rolls">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Prediction Accuracy</div>
+      <div class="card-value" id="dash-accuracy">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Current Streak</div>
+      <div class="card-value" id="dash-streak">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Best Streak</div>
+      <div class="card-value" id="dash-best-streak">0</div>
+    </div>
+  </div>
+
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">🎯 Next Prediction</div>
+      <div class="prediction-box">
+        <div class="prediction-number" id="dash-prediction">—</div>
+        <div class="text-sm text-muted" id="dash-pred-conf">Enter at least 5 rolls</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Number Frequency</div>
+      <div class="grid" style="grid-template-columns: repeat(3,1fr); gap:8px;" id="dash-freq-tiles"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0;">Recent Rolls</div>
+      <span class="text-xs text-muted" id="dash-showing"></span>
+    </div>
+    <div class="history-grid" id="dash-history"></div>
+  </div>
+</div>
+
+<!-- ===== NUMBER ANALYSIS TAB ===== -->
+<div class="tab-content" id="tab-numbers">
+  <div class="grid grid-3 mb-16" id="num-tiles"></div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Frequency Distribution</div>
+      <div id="num-freq-bars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Gap Analysis (Rolls Since Last Seen)</div>
+      <div id="num-gap-bars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PATTERN ENGINE TAB ===== -->
+<div class="tab-content" id="tab-patterns">
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">Markov Transition Matrix</div>
+      <div class="text-xs text-muted mb-8">Probability of number Y following number X</div>
+      <div id="markov-heatmap"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Doubles & Triples</div>
+      <div id="doubles-info"></div>
+    </div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Consecutive Patterns</div>
+      <div id="consec-patterns"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Hot & Cold Numbers</div>
+      <div id="hot-cold"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MATH SIGNALS TAB ===== -->
+<div class="tab-content" id="tab-signals">
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">Z-Score Reversion Signals</div>
+      <div id="zscore-signals"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">EWMA Momentum</div>
+      <div id="ewma-signals"></div>
+    </div>
+  </div>
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">Bayesian Posterior</div>
+      <div id="bayes-signals"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Shannon Entropy</div>
+      <div id="entropy-info"></div>
+    </div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Chi-Squared Uniformity</div>
+      <div id="chi-info"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Gap Overdue Analysis</div>
+      <div id="gap-signals"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SUM ANALYSIS TAB ===== -->
+<div class="tab-content" id="tab-sums">
+  <div class="grid grid-4 mb-16">
+    <div class="card">
+      <div class="card-title">Average Sum</div>
+      <div class="card-value" id="sum-avg">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Small (3-10) vs Big (11-18)</div>
+      <div id="sum-sb"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Odd vs Even Sums</div>
+      <div id="sum-oe"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sum Std Dev</div>
+      <div class="card-value" id="sum-std">—</div>
+    </div>
+  </div>
+  <div class="card mb-16">
+    <div class="card-title">Sum Distribution (3–18)</div>
+    <div id="sum-dist"></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Recent Sum Trend</div>
+      <div id="sum-trend"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sum Ranges</div>
+      <div id="sum-ranges"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== STATISTICS TAB ===== -->
+<div class="tab-content" id="tab-stats">
+  <div class="grid grid-3 mb-16">
+    <div class="card">
+      <div class="card-title">Total Dice Thrown</div>
+      <div class="card-value" id="stat-total-dice">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Predictions Made</div>
+      <div class="card-value" id="stat-predictions">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Correct Predictions</div>
+      <div class="card-value text-green" id="stat-correct">0</div>
+    </div>
+  </div>
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">Accuracy Over Time</div>
+      <div id="stat-acc-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Prediction Log</div>
+      <div style="max-height:300px;overflow-y:auto;" id="stat-pred-log"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Learning Database — Engine Weights</div>
+    <div id="stat-weights"></div>
+  </div>
+</div>
+
+<!-- ===== PREDICTION ENGINE TAB ===== -->
+<div class="tab-content" id="tab-prediction">
+  <div class="grid grid-2 mb-16">
+    <div class="card" style="grid-column: span 1;">
+      <div class="card-title">🎯 Primary Prediction</div>
+      <div class="prediction-box" style="padding:32px;">
+        <div class="confidence-ring" id="pred-ring">
+          <svg width="120" height="120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle id="pred-ring-fill" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8"
+              stroke-dasharray="326.7" stroke-dashoffset="326.7" stroke-linecap="round"/>
+          </svg>
+          <div class="value" id="pred-conf-val">0%</div>
+        </div>
+        <div class="prediction-number" id="pred-number">—</div>
+        <div class="text-sm text-muted mb-8" id="pred-reason"></div>
+        <div class="text-xs text-muted" id="pred-sub"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">All Number Scores</div>
+      <div id="pred-all-scores"></div>
+    </div>
+  </div>
+  <div class="card mb-16">
+    <div class="card-title">Composite Signal Breakdown</div>
+    <div id="pred-breakdown"></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title">Engine Contributions</div>
+      <div id="pred-engines"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 3 Picks History</div>
+      <div style="max-height:250px;overflow-y:auto;" id="pred-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION MODAL -->
+<div class="modal-overlay" id="session-modal">
+  <div class="modal">
+    <div class="flex-between mb-16">
+      <h3>Session Management</h3>
+      <button class="btn btn-secondary btn-sm" onclick="closeSessionModal()">✕</button>
+    </div>
+    <div class="mb-16">
+      <div class="flex-between mb-8">
+        <span class="text-sm fw-700">Current: <span class="text-accent" id="modal-current"></span></span>
+        <button class="btn btn-primary btn-sm" onclick="newSession()">+ New Session</button>
+      </div>
+    </div>
+    <div id="session-list"></div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <button class="btn btn-danger btn-sm" onclick="clearAllData()">⚠ Clear All Data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
+const STORAGE_KEY = 'dice_oracle_data';
+const DEFAULT_SESSION = 'Default';
+
+function defaultState() {
+  return {
+    currentSession: DEFAULT_SESSION,
+    sessions: {
+      [DEFAULT_SESSION]: {
+        rolls: [],
+        predictions: [],
+        predictionLog: [],
+        engineWeights: { zscore: 1, markov: 1.2, ewma: 0.8, entropy: 0.7, bayes: 1, chi: 0.6, gap: 1.1 },
+        createdAt: Date.now()
+      }
+    },
+    archivedSessions: {}
+  };
+}
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.sessions) return parsed;
+    }
+  } catch(e) { /* ignore */ }
+  return defaultState();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function getSession() {
+  return state.sessions[state.currentSession];
+}
+
+// ============================================================
+// DICE INPUT & ROLL MANAGEMENT
+// ============================================================
+function addRoll() {
+  const d1 = parseInt(document.getElementById('d1').value);
+  const d2 = parseInt(document.getElementById('d2').value);
+  const d3 = parseInt(document.getElementById('d3').value);
+  if (![d1,d2,d3].every(v => v >= 1 && v <= 6)) {
+    shakeInput(); return;
+  }
+  const roll = [d1, d2, d3];
+  const session = getSession();
+
+  // Check previous prediction
+  if (session.predictions.length > 0) {
+    const lastPred = session.predictions[session.predictions.length - 1];
+    if (!lastPred.resolved) {
+      const hit = roll.includes(lastPred.number);
+      lastPred.resolved = true;
+      lastPred.hit = hit;
+      session.predictionLog.push({
+        roll: session.rolls.length + 1,
+        predicted: lastPred.number,
+        actual: roll,
+        hit,
+        confidence: lastPred.confidence,
+        ts: Date.now()
+      });
+      // Adapt weights
+      adaptWeights(lastPred, hit);
+    }
+  }
+
+  session.rolls.push({ dice: roll, ts: Date.now() });
+
+  // Generate next prediction
+  if (session.rolls.length >= 5) {
+    const pred = generatePrediction();
+    pred.resolved = false;
+    session.predictions.push(pred);
+  }
+
+  saveState();
+  clearInputs();
+  refreshAll();
+}
+
+function randomRoll() {
+  document.getElementById('d1').value = Math.floor(Math.random()*6)+1;
+  document.getElementById('d2').value = Math.floor(Math.random()*6)+1;
+  document.getElementById('d3').value = Math.floor(Math.random()*6)+1;
+}
+
+function undoLast() {
+  const session = getSession();
+  if (session.rolls.length === 0) return;
+  session.rolls.pop();
+  if (session.predictions.length > 0) {
+    const lastPred = session.predictions[session.predictions.length - 1];
+    if (!lastPred.resolved) session.predictions.pop();
+    else {
+      session.predictionLog.pop();
+      lastPred.resolved = false;
+      delete lastPred.hit;
+    }
+  }
+  saveState();
+  refreshAll();
+}
+
+function shakeInput() {
+  document.querySelectorAll('.dice-input').forEach(el => {
+    el.style.borderColor = 'var(--red)';
+    setTimeout(() => el.style.borderColor = '', 500);
+  });
+}
+
+function clearInputs() {
+  ['d1','d2','d3'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('d1').focus();
+}
+
+// auto-tab
+['d1','d2','d3'].forEach((id, i, arr) => {
+  document.getElementById(id).addEventListener('input', function() {
+    const v = parseInt(this.value);
+    if (v >= 1 && v <= 6 && i < arr.length - 1) {
+      document.getElementById(arr[i+1]).focus();
+    }
+  });
+  document.getElementById(id).addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addRoll();
+  });
+});
+
+// ============================================================
+// MATHEMATICAL ENGINES
+// ============================================================
+function getFrequencies() {
+  const session = getSession();
+  const freq = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+  session.rolls.forEach(r => r.dice.forEach(d => freq[d]++));
+  return freq;
+}
+
+function getTotalDice() {
+  return getSession().rolls.length * 3;
+}
+
+// Z-Score Reversion
+function calcZScores() {
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  if (total === 0) return { 1:0,2:0,3:0,4:0,5:0,6:0 };
+  const expected = total / 6;
+  const stdDev = Math.sqrt(total * (1/6) * (5/6));
+  const zscores = {};
+  for (let n = 1; n <= 6; n++) {
+    zscores[n] = stdDev > 0 ? (freq[n] - expected) / stdDev : 0;
+  }
+  return zscores;
+}
+
+function zscoreSignals() {
+  const zs = calcZScores();
+  const signals = {};
+  for (let n = 1; n <= 6; n++) {
+    // Negative z-score means underrepresented → expect reversion upward
+    signals[n] = -zs[n] * 0.3;
+  }
+  return signals;
+}
+
+// Markov Transition Matrix
+function calcMarkov() {
+  const session = getSession();
+  const matrix = {};
+  for (let i = 1; i <= 6; i++) {
+    matrix[i] = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+  }
+  const allNumbers = [];
+  session.rolls.forEach(r => r.dice.forEach(d => allNumbers.push(d)));
+  for (let i = 0; i < allNumbers.length - 1; i++) {
+    matrix[allNumbers[i]][allNumbers[i+1]]++;
+  }
+  // Normalize
+  const prob = {};
+  for (let i = 1; i <= 6; i++) {
+    prob[i] = {};
+    const rowSum = Object.values(matrix[i]).reduce((a,b) => a+b, 0);
+    for (let j = 1; j <= 6; j++) {
+      prob[i][j] = rowSum > 0 ? matrix[i][j] / rowSum : 1/6;
+    }
+  }
+  return { counts: matrix, prob };
+}
+
+function markovSignals() {
+  const session = getSession();
+  if (session.rolls.length < 2) return { 1:0,2:0,3:0,4:0,5:0,6:0 };
+  const lastRoll = session.rolls[session.rolls.length - 1].dice;
+  const { prob } = calcMarkov();
+  const signals = { 1:0,2:0,3:0,4:0,5:0,6:0 };
+  lastRoll.forEach(d => {
+    for (let n = 1; n <= 6; n++) {
+      signals[n] += (prob[d][n] - 1/6) * 0.5;
+    }
+  });
+  // Average over the 3 dice
+  for (let n = 1; n <= 6; n++) signals[n] /= 3;
+  return signals;
+}
+
+// EWMA Momentum
+function calcEWMA(alpha = 0.3) {
+  const session = getSession();
+  const ewma = { 1:1/6,2:1/6,3:1/6,4:1/6,5:1/6,6:1/6 };
+  session.rolls.forEach(r => {
+    const present = { 1:0,2:0,3:0,4:0,5:0,6:0 };
+    r.dice.forEach(d => present[d] = 1);
+    for (let n = 1; n <= 6; n++) {
+      ewma[n] = alpha * (present[n] ? 1 : 0) + (1 - alpha) * ewma[n];
+    }
+  });
+  return ewma;
+}
+
+function ewmaSignals() {
+  const ewma = calcEWMA();
+  const signals = {};
+  for (let n = 1; n <= 6; n++) {
+    signals[n] = (ewma[n] - 1/6) * 2;
+  }
+  return signals;
+}
+
+// Shannon Entropy
+function calcEntropy() {
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  if (total === 0) return { entropy: 0, maxEntropy: Math.log2(6), ratio: 0 };
+  let H = 0;
+  for (let n = 1; n <= 6; n++) {
+    const p = freq[n] / total;
+    if (p > 0) H -= p * Math.log2(p);
+  }
+  const maxH = Math.log2(6);
+  return { entropy: H, maxEntropy: maxH, ratio: H / maxH };
+}
+
+function entropySignals() {
+  // Low entropy → overrepresented numbers; push toward less common
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  if (total === 0) return { 1:0,2:0,3:0,4:0,5:0,6:0 };
+  const { ratio } = calcEntropy();
+  const signals = {};
+  const expected = total / 6;
+  for (let n = 1; n <= 6; n++) {
+    const deviation = (expected - freq[n]) / Math.max(expected, 1);
+    signals[n] = deviation * (1 - ratio) * 0.5;
+  }
+  return signals;
+}
+
+// Bayesian Posterior
+function calcBayes() {
+  const freq = getFrequencies();
+  // Dirichlet prior: alpha_i = 1 (uniform)
+  const alpha0 = 1;
+  const total = getTotalDice();
+  const posterior = {};
+  const totalAlpha = 6 * alpha0 + total;
+  for (let n = 1; n <= 6; n++) {
+    posterior[n] = (alpha0 + freq[n]) / totalAlpha;
+  }
+  return posterior;
+}
+
+function bayesSignals() {
+  const post = calcBayes();
+  const signals = {};
+  for (let n = 1; n <= 6; n++) {
+    signals[n] = (post[n] - 1/6) * 3;
+  }
+  return signals;
+}
+
+// Chi-Squared
+function calcChiSquared() {
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  if (total === 0) return { chi2: 0, pApprox: 1, significant: false };
+  const expected = total / 6;
+  let chi2 = 0;
+  for (let n = 1; n <= 6; n++) {
+    chi2 += Math.pow(freq[n] - expected, 2) / expected;
+  }
+  // df=5, critical value at p=0.05 is 11.07
+  return { chi2, significant: chi2 > 11.07, expected };
+}
+
+function chiSignals() {
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  if (total === 0) return { 1:0,2:0,3:0,4:0,5:0,6:0 };
+  const expected = total / 6;
+  const { significant } = calcChiSquared();
+  const signals = {};
+  for (let n = 1; n <= 6; n++) {
+    // If distribution is significantly non-uniform, push toward underrepresented
+    signals[n] = significant ? (expected - freq[n]) / Math.max(total, 1) * 2 : 0;
+  }
+  return signals;
+}
+
+// Gap Analysis
+function calcGaps() {
+  const session = getSession();
+  const lastSeen = { 1: -1, 2: -1, 3: -1, 4: -1, 5: -1, 6: -1 };
+  session.rolls.forEach((r, i) => {
+    r.dice.forEach(d => lastSeen[d] = i);
+  });
+  const gaps = {};
+  const totalRolls = session.rolls.length;
+  for (let n = 1; n <= 6; n++) {
+    gaps[n] = lastSeen[n] === -1 ? totalRolls : totalRolls - 1 - lastSeen[n];
+  }
+  return gaps;
+}
+
+function gapSignals() {
+  const gaps = calcGaps();
+  const session = getSession();
+  if (session.rolls.length === 0) return { 1:0,2:0,3:0,4:0,5:0,6:0 };
+  // Expected gap between appearances: ~1.8 rolls (per 3-dice roll, P(appear) ≈ 0.421)
+  const expectedGap = 1 / 0.4213;
+  const signals = {};
+  for (let n = 1; n <= 6; n++) {
+    signals[n] = (gaps[n] - expectedGap) / expectedGap * 0.4;
+  }
+  return signals;
+}
+
+// Composite Weighted Signal
+function generatePrediction() {
+  const session = getSession();
+  const w = session.engineWeights;
+  const engines = {
+    zscore: zscoreSignals(),
+    markov: markovSignals(),
+    ewma: ewmaSignals(),
+    entropy: entropySignals(),
+    bayes: bayesSignals(),
+    chi: chiSignals(),
+    gap: gapSignals()
+  };
+
+  const composite = {};
+  for (let n = 1; n <= 6; n++) {
+    composite[n] = 0;
+    for (const eng of Object.keys(engines)) {
+      composite[n] += (engines[eng][n] || 0) * (w[eng] || 1);
+    }
+  }
+
+  // Normalize to a score 0-100
+  const vals = Object.values(composite);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const range = maxV - minV || 1;
+  const scores = {};
+  for (let n = 1; n <= 6; n++) {
+    scores[n] = ((composite[n] - minV) / range) * 100;
+  }
+
+  // Pick best
+  let best = 1, bestScore = -Infinity;
+  for (let n = 1; n <= 6; n++) {
+    if (composite[n] > bestScore) { bestScore = composite[n]; best = n; }
+  }
+
+  // Confidence: how much the best stands out
+  const sorted = Object.values(composite).sort((a,b) => b - a);
+  const separation = sorted.length > 1 ? (sorted[0] - sorted[1]) / (range || 1) : 0;
+  const confidence = Math.min(95, Math.max(25, 42 + separation * 50));
+
+  return {
+    number: best,
+    confidence: Math.round(confidence),
+    scores,
+    engines,
+    composite,
+    ts: Date.now()
+  };
+}
+
+// Weight Adaptation
+function adaptWeights(pred, hit) {
+  const session = getSession();
+  const w = session.engineWeights;
+  const lr = 0.05; // learning rate
+  if (!pred.engines) return;
+  for (const eng of Object.keys(pred.engines)) {
+    const signal = pred.engines[eng][pred.number] || 0;
+    if (hit) {
+      // Reward engines that pointed toward the winning number
+      if (signal > 0) w[eng] = Math.min(3, w[eng] + lr);
+    } else {
+      // Penalize engines that strongly recommended this number
+      if (signal > 0) w[eng] = Math.max(0.1, w[eng] - lr * 0.5);
+    }
+  }
+}
+
+// ============================================================
+// SESSION MANAGEMENT
+// ============================================================
+function showSessionModal() {
+  document.getElementById('session-modal').classList.add('active');
+  renderSessionList();
+}
+function closeSessionModal() {
+  document.getElementById('session-modal').classList.remove('active');
+}
+
+function newSession() {
+  const name = prompt('Session name:');
+  if (!name || !name.trim()) return;
+  const safeName = name.trim().substring(0, 50);
+  if (state.sessions[safeName]) { alert('Session exists!'); return; }
+  state.sessions[safeName] = {
+    rolls: [], predictions: [], predictionLog: [],
+    engineWeights: { zscore: 1, markov: 1.2, ewma: 0.8, entropy: 0.7, bayes: 1, chi: 0.6, gap: 1.1 },
+    createdAt: Date.now()
+  };
+  state.currentSession = safeName;
+  saveState(); refreshAll(); renderSessionList();
+}
+
+function switchSession(name) {
+  state.currentSession = name;
+  saveState(); refreshAll(); closeSessionModal();
+}
+
+function archiveSession(name) {
+  if (name === state.currentSession && Object.keys(state.sessions).length <= 1) {
+    alert('Cannot archive the only session'); return;
+  }
+  state.archivedSessions[name + '_' + Date.now()] = state.sessions[name];
+  delete state.sessions[name];
+  if (name === state.currentSession) {
+    state.currentSession = Object.keys(state.sessions)[0];
+  }
+  saveState(); refreshAll(); renderSessionList();
+}
+
+function restoreSession(key) {
+  const session = state.archivedSessions[key];
+  const name = key.replace(/_\d+$/, '');
+  let finalName = name;
+  let i = 1;
+  while (state.sessions[finalName]) { finalName = name + ' (' + i + ')'; i++; }
+  state.sessions[finalName] = session;
+  delete state.archivedSessions[key];
+  saveState(); renderSessionList();
+}
+
+function deleteArchived(key) {
+  delete state.archivedSessions[key];
+  saveState(); renderSessionList();
+}
+
+function clearAllData() {
+  if (confirm('Delete ALL data? This cannot be undone.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    saveState(); refreshAll(); renderSessionList();
+  }
+}
+
+function renderSessionList() {
+  document.getElementById('modal-current').textContent = state.currentSession;
+  let html = '<div class="text-xs text-muted mb-8">Active Sessions</div>';
+  for (const name of Object.keys(state.sessions)) {
+    const s = state.sessions[name];
+    const isCurrent = name === state.currentSession;
+    html += `<div class="session-item">
+      <div class="session-info">
+        <div class="session-name">${esc(name)} ${isCurrent ? '<span class="badge badge-amber">active</span>' : ''}</div>
+        <div class="session-meta">${s.rolls.length} rolls · Created ${new Date(s.createdAt).toLocaleDateString()}</div>
+      </div>
+      <div class="session-actions">
+        ${!isCurrent ? `<button class="btn btn-secondary btn-sm" onclick="switchSession('${esc(name)}')">Load</button>` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="archiveSession('${esc(name)}')">Archive</button>
+      </div>
+    </div>`;
+  }
+  const archKeys = Object.keys(state.archivedSessions);
+  if (archKeys.length > 0) {
+    html += '<div class="text-xs text-muted mb-8" style="margin-top:16px;">Archived Sessions</div>';
+    archKeys.forEach(key => {
+      const s = state.archivedSessions[key];
+      html += `<div class="session-item">
+        <div class="session-info">
+          <div class="session-name">${esc(key.replace(/_\d+$/, ''))}</div>
+          <div class="session-meta">${s.rolls.length} rolls</div>
+        </div>
+        <div class="session-actions">
+          <button class="btn btn-secondary btn-sm" onclick="restoreSession('${esc(key)}')">Restore</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteArchived('${esc(key)}')">Delete</button>
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('session-list').innerHTML = html;
+}
+
+function esc(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML.replace(/'/g, '&#39;');
+}
+
+// ============================================================
+// TAB MANAGEMENT
+// ============================================================
+document.getElementById('tab-bar').addEventListener('click', e => {
+  if (!e.target.classList.contains('tab-btn')) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('tab-' + e.target.dataset.tab).classList.add('active');
+  refreshAll();
+});
+
+// ============================================================
+// UI RENDERING
+// ============================================================
+function refreshAll() {
+  renderHeader();
+  renderDashboard();
+  renderNumbers();
+  renderPatterns();
+  renderSignals();
+  renderSums();
+  renderStats();
+  renderPrediction();
+}
+
+function renderHeader() {
+  const session = getSession();
+  const log = session.predictionLog;
+  document.getElementById('hdr-rolls').textContent = session.rolls.length;
+  document.getElementById('hdr-session').textContent = state.currentSession;
+  if (log.length > 0) {
+    const hits = log.filter(l => l.hit).length;
+    document.getElementById('hdr-accuracy').textContent = (hits / log.length * 100).toFixed(1) + '%';
+    // Current streak
+    let streak = 0;
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].hit) streak++; else break;
+    }
+    document.getElementById('hdr-streak').textContent = streak;
+  } else {
+    document.getElementById('hdr-accuracy').textContent = '—';
+    document.getElementById('hdr-streak').textContent = '0';
+  }
+}
+
+function renderDashboard() {
+  const session = getSession();
+  const log = session.predictionLog;
+  const rolls = session.rolls;
+
+  document.getElementById('dash-rolls').textContent = rolls.length;
+
+  // Accuracy
+  if (log.length > 0) {
+    const hits = log.filter(l => l.hit).length;
+    document.getElementById('dash-accuracy').textContent = (hits / log.length * 100).toFixed(1) + '%';
+    document.getElementById('dash-accuracy').style.color = hits/log.length > 0.42 ? 'var(--green)' : 'var(--red)';
+  } else {
+    document.getElementById('dash-accuracy').textContent = '—';
+    document.getElementById('dash-accuracy').style.color = '';
+  }
+
+  // Streaks
+  let curStreak = 0, bestStreak = 0, tempStreak = 0;
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].hit) curStreak++; else break;
+  }
+  for (const entry of log) {
+    if (entry.hit) { tempStreak++; bestStreak = Math.max(bestStreak, tempStreak); }
+    else tempStreak = 0;
+  }
+  document.getElementById('dash-streak').textContent = curStreak;
+  document.getElementById('dash-streak').style.color = curStreak > 0 ? 'var(--green)' : '';
+  document.getElementById('dash-best-streak').textContent = bestStreak;
+
+  // Prediction
+  const activePred = session.predictions.find(p => !p.resolved);
+  if (activePred) {
+    document.getElementById('dash-prediction').textContent = activePred.number;
+    document.getElementById('dash-pred-conf').textContent = `Confidence: ${activePred.confidence}%`;
+  } else {
+    document.getElementById('dash-prediction').textContent = rolls.length < 5 ? '—' : '✓';
+    document.getElementById('dash-pred-conf').textContent = rolls.length < 5 ? `Need ${5 - rolls.length} more rolls` : 'Add roll to see prediction';
+  }
+
+  // Frequency tiles
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  let tilesHtml = '';
+  for (let n = 1; n <= 6; n++) {
+    const pct = total > 0 ? (freq[n] / total * 100).toFixed(1) : '0.0';
+    tilesHtml += `<div class="number-tile">
+      <div class="num">${n}</div>
+      <div class="freq">${freq[n]} hits</div>
+      <div class="pct">${pct}%</div>
+    </div>`;
+  }
+  document.getElementById('dash-freq-tiles').innerHTML = tilesHtml;
+
+  // Recent rolls
+  const recent = rolls.slice(-30).reverse();
+  document.getElementById('dash-showing').textContent = `Showing ${recent.length} of ${rolls.length}`;
+  let histHtml = '';
+  recent.forEach((r, i) => {
+    const rollNum = rolls.length - i;
+    histHtml += `<div class="history-item">
+      <div class="roll-num">#${rollNum}</div>
+      <div class="roll-vals">${r.dice.join(' · ')}</div>
+    </div>`;
+  });
+  document.getElementById('dash-history').innerHTML = histHtml;
+}
+
+function renderNumbers() {
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  const gaps = calcGaps();
+  const zscores = calcZScores();
+  const ewma = calcEWMA();
+
+  let tilesHtml = '';
+  for (let n = 1; n <= 6; n++) {
+    const pct = total > 0 ? (freq[n] / total * 100).toFixed(1) : '0.0';
+    const zs = zscores[n].toFixed(2);
+    const zsColor = zscores[n] > 1 ? 'text-green' : zscores[n] < -1 ? 'text-red' : 'text-muted';
+    const ew = (ewma[n] * 100).toFixed(1);
+    tilesHtml += `<div class="card">
+      <div class="flex-between mb-8">
+        <span style="font-size:2rem;font-weight:800;color:var(--accent);">${n}</span>
+        <span class="badge ${zscores[n] > 0.5 ? 'badge-green' : zscores[n] < -0.5 ? 'badge-red' : 'badge-blue'}">
+          z: ${zs}
+        </span>
+      </div>
+      <div class="text-sm mb-8">Frequency: <strong>${freq[n]}</strong> (${pct}%)</div>
+      <div class="progress-bar mb-8">
+        <div class="progress-fill" style="width:${pct}%;background:var(--accent);"></div>
+      </div>
+      <div class="text-xs text-muted">Gap: ${gaps[n]} rolls · EWMA: ${ew}%</div>
+    </div>`;
+  }
+  document.getElementById('num-tiles').innerHTML = tilesHtml;
+
+  // Frequency bars
+  let freqHtml = '';
+  const maxFreq = Math.max(...Object.values(freq), 1);
+  for (let n = 1; n <= 6; n++) {
+    const w = (freq[n] / maxFreq * 100);
+    const pct = total > 0 ? (freq[n] / total * 100).toFixed(1) : '0.0';
+    freqHtml += `<div class="sum-bar-container">
+      <div class="sum-bar-label"><span>Die ${n}</span><span>${freq[n]} (${pct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${w}%;background:var(--accent);">${freq[n]}</div></div>
+    </div>`;
+  }
+  document.getElementById('num-freq-bars').innerHTML = freqHtml;
+
+  // Gap bars
+  let gapHtml = '';
+  const maxGap = Math.max(...Object.values(gaps), 1);
+  for (let n = 1; n <= 6; n++) {
+    const w = (gaps[n] / maxGap * 100);
+    const hot = gaps[n] === 0;
+    gapHtml += `<div class="sum-bar-container">
+      <div class="sum-bar-label"><span>Die ${n}</span><span>${gaps[n]} rolls ${hot ? '🔥' : ''}</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${w}%;background:${gaps[n] > 3 ? 'var(--red)' : 'var(--green)'};">${gaps[n]}</div></div>
+    </div>`;
+  }
+  document.getElementById('num-gap-bars').innerHTML = gapHtml;
+}
+
+function renderPatterns() {
+  const session = getSession();
+  const { counts, prob } = calcMarkov();
+
+  // Markov heatmap
+  let hmHtml = '<div class="heatmap-row"><div class="heatmap-cell" style="opacity:0.5;">→</div>';
+  for (let j = 1; j <= 6; j++) hmHtml += `<div class="heatmap-cell" style="color:var(--accent);font-weight:700;">${j}</div>`;
+  hmHtml += '</div>';
+  for (let i = 1; i <= 6; i++) {
+    hmHtml += `<div class="heatmap-row"><div class="heatmap-cell" style="color:var(--accent);font-weight:700;">${i}</div>`;
+    for (let j = 1; j <= 6; j++) {
+      const p = prob[i][j];
+      const intensity = Math.round(p * 255 * 3);
+      const r = Math.min(255, intensity);
+      const g = Math.min(255, Math.round(intensity * 0.6));
+      const bg = `rgba(${r},${g},0,${Math.max(0.1, p)})`;
+      hmHtml += `<div class="heatmap-cell" style="background:${bg};">${(p*100).toFixed(0)}%</div>`;
+    }
+    hmHtml += '</div>';
+  }
+  document.getElementById('markov-heatmap').innerHTML = hmHtml;
+
+  // Doubles & Triples
+  let doubles = 0, triples = 0, doublesDetail = {};
+  session.rolls.forEach(r => {
+    const sorted = [...r.dice].sort();
+    if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) {
+      triples++;
+    } else if (sorted[0] === sorted[1] || sorted[1] === sorted[2]) {
+      doubles++;
+      const dv = sorted[0] === sorted[1] ? sorted[0] : sorted[1];
+      doublesDetail[dv] = (doublesDetail[dv] || 0) + 1;
+    }
+  });
+  let dbHtml = `<div class="text-sm mb-8">Doubles: <strong class="text-accent">${doubles}</strong> (${session.rolls.length > 0 ? (doubles/session.rolls.length*100).toFixed(1) : 0}%)</div>`;
+  dbHtml += `<div class="text-sm mb-12">Triples: <strong class="text-accent">${triples}</strong> (${session.rolls.length > 0 ? (triples/session.rolls.length*100).toFixed(1) : 0}%)</div>`;
+  if (Object.keys(doublesDetail).length > 0) {
+    dbHtml += '<div class="text-xs text-muted mb-8">Double breakdown:</div>';
+    for (const [num, count] of Object.entries(doublesDetail).sort((a,b) => b[1]-a[1])) {
+      dbHtml += `<div class="text-sm">Double ${num}s: ${count}</div>`;
+    }
+  }
+  document.getElementById('doubles-info').innerHTML = dbHtml;
+
+  // Consecutive patterns
+  let consecHtml = '';
+  if (session.rolls.length >= 2) {
+    const lastDice = session.rolls.slice(-10);
+    consecHtml = '<div class="text-xs text-muted mb-8">Last 10 rolls progression:</div>';
+    lastDice.forEach((r, i) => {
+      const rollNum = session.rolls.length - lastDice.length + i + 1;
+      consecHtml += `<div class="text-sm" style="margin-bottom:4px;">#${rollNum}: <strong class="text-accent">${r.dice.join(', ')}</strong> (sum: ${r.dice.reduce((a,b)=>a+b,0)})</div>`;
+    });
+  } else {
+    consecHtml = '<div class="text-sm text-muted">Need at least 2 rolls</div>';
+  }
+  document.getElementById('consec-patterns').innerHTML = consecHtml;
+
+  // Hot & Cold
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  const expected = total / 6;
+  const nums = [1,2,3,4,5,6].sort((a,b) => freq[b] - freq[a]);
+  let hcHtml = '<div class="text-xs text-muted mb-8">Sorted by frequency:</div>';
+  nums.forEach((n, i) => {
+    const pct = total > 0 ? (freq[n]/total*100).toFixed(1) : '0.0';
+    const isHot = freq[n] > expected;
+    hcHtml += `<div class="flex-between mb-8">
+      <span><span style="font-weight:700;font-size:1.1rem;color:var(--accent);">${n}</span>
+      <span class="text-sm"> — ${freq[n]} (${pct}%)</span></span>
+      <span class="badge ${isHot ? 'badge-green' : 'badge-red'}">${isHot ? '🔥 Hot' : '❄ Cold'}</span>
+    </div>`;
+  });
+  document.getElementById('hot-cold').innerHTML = hcHtml;
+}
+
+function renderSignals() {
+  const session = getSession();
+  if (session.rolls.length < 3) {
+    ['zscore-signals','ewma-signals','bayes-signals','entropy-info','chi-info','gap-signals'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="text-sm text-muted">Need at least 3 rolls for signal analysis</div>';
+    });
+    return;
+  }
+
+  // Z-Score
+  const zs = calcZScores();
+  const zsSignals = zscoreSignals();
+  let zsHtml = '';
+  for (let n = 1; n <= 6; n++) {
+    const val = zs[n];
+    const sig = zsSignals[n];
+    const color = val < -1 ? 'var(--red)' : val > 1 ? 'var(--green)' : 'var(--blue)';
+    const w = Math.min(100, Math.abs(val) / 3 * 100);
+    const label = val < -1 ? 'Underdue' : val > 1 ? 'Overdue revert' : 'Normal';
+    zsHtml += `<div class="signal-meter mb-8">
+      <span style="min-width:20px;font-weight:700;color:var(--accent);">${n}</span>
+      <div class="signal-bar"><div class="signal-fill" style="width:${w}%;background:${color};left:0;"></div></div>
+      <span class="signal-label" style="color:${color};">${val.toFixed(2)}</span>
+      <span class="text-xs text-muted" style="min-width:80px;">${label}</span>
+    </div>`;
+  }
+  document.getElementById('zscore-signals').innerHTML = zsHtml;
+
+  // EWMA
+  const ewma = calcEWMA();
+  let ewHtml = '';
+  for (let n = 1; n <= 6; n++) {
+    const val = ewma[n];
+    const w = val * 100;
+    const color = val > 0.2 ? 'var(--green)' : val < 0.12 ? 'var(--red)' : 'var(--blue)';
+    ewHtml += `<div class="signal-meter mb-8">
+      <span style="min-width:20px;font-weight:700;color:var(--accent);">${n}</span>
+      <div class="signal-bar"><div class="signal-fill" style="width:${w}%;background:${color};left:0;"></div></div>
+      <span class="signal-label">${(val*100).toFixed(1)}%</span>
+      <span class="text-xs text-muted" style="min-width:60px;">${val > 0.2 ? 'Rising' : val < 0.12 ? 'Falling' : 'Stable'}</span>
+    </div>`;
+  }
+  document.getElementById('ewma-signals').innerHTML = ewHtml;
+
+  // Bayesian
+  const post = calcBayes();
+  let bHtml = '';
+  for (let n = 1; n <= 6; n++) {
+    const val = post[n];
+    const w = val * 100 * 3; // scale for visibility
+    const color = val > 0.18 ? 'var(--green)' : val < 0.14 ? 'var(--red)' : 'var(--blue)';
+    bHtml += `<div class="signal-meter mb-8">
+      <span style="min-width:20px;font-weight:700;color:var(--accent);">${n}</span>
+      <div class="signal-bar"><div class="signal-fill" style="width:${Math.min(100,w)}%;background:${color};left:0;"></div></div>
+      <span class="signal-label">${(val*100).toFixed(2)}%</span>
+    </div>`;
+  }
+  document.getElementById('bayes-signals').innerHTML = bHtml;
+
+  // Entropy
+  const ent = calcEntropy();
+  let eHtml = `<div class="card-value mb-8" style="font-size:1.5rem;">${ent.entropy.toFixed(4)}</div>`;
+  eHtml += `<div class="text-sm mb-8">Max Entropy: ${ent.maxEntropy.toFixed(4)}</div>`;
+  eHtml += `<div class="text-sm mb-12">Uniformity Ratio: <strong class="${ent.ratio > 0.95 ? 'text-green' : 'text-accent'}">${(ent.ratio*100).toFixed(1)}%</strong></div>`;
+  eHtml += `<div class="progress-bar"><div class="progress-fill" style="width:${ent.ratio*100}%;background:${ent.ratio > 0.95 ? 'var(--green)' : 'var(--accent)'};"></div></div>`;
+  eHtml += `<div class="text-xs text-muted" style="margin-top:8px;">${ent.ratio > 0.95 ? 'Distribution is near-uniform (high entropy)' : 'Some bias detected (lower entropy)'}</div>`;
+  document.getElementById('entropy-info').innerHTML = eHtml;
+
+  // Chi-Squared
+  const chi = calcChiSquared();
+  let cHtml = `<div class="card-value mb-8" style="font-size:1.5rem;">χ² = ${chi.chi2.toFixed(3)}</div>`;
+  cHtml += `<div class="text-sm mb-8">Critical (p=0.05, df=5): 11.07</div>`;
+  cHtml += `<div class="text-sm mb-8">Result: <span class="badge ${chi.significant ? 'badge-red' : 'badge-green'}">${chi.significant ? 'Significant bias detected' : 'No significant bias'}</span></div>`;
+  cHtml += `<div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, chi.chi2/11.07*100)}%;background:${chi.significant ? 'var(--red)' : 'var(--green)'};"></div></div>`;
+  document.getElementById('chi-info').innerHTML = cHtml;
+
+  // Gap overdue
+  const gaps = calcGaps();
+  const gSig = gapSignals();
+  let gHtml = '';
+  const expectedGap = (1 / 0.4213).toFixed(1);
+  gHtml += `<div class="text-xs text-muted mb-8">Expected gap: ~${expectedGap} rolls</div>`;
+  for (let n = 1; n <= 6; n++) {
+    const overdue = gaps[n] > 3;
+    const w = Math.min(100, gaps[n] / 8 * 100);
+    gHtml += `<div class="signal-meter mb-8">
+      <span style="min-width:20px;font-weight:700;color:var(--accent);">${n}</span>
+      <div class="signal-bar"><div class="signal-fill" style="width:${w}%;background:${overdue ? 'var(--red)' : 'var(--green)'};left:0;"></div></div>
+      <span class="signal-label">${gaps[n]}</span>
+      <span class="text-xs" style="min-width:60px;color:${overdue ? 'var(--red)' : 'var(--text-muted)'};">${overdue ? 'OVERDUE' : 'OK'}</span>
+    </div>`;
+  }
+  document.getElementById('gap-signals').innerHTML = gHtml;
+}
+
+function renderSums() {
+  const session = getSession();
+  const rolls = session.rolls;
+  if (rolls.length === 0) {
+    ['sum-avg','sum-std'].forEach(id => document.getElementById(id).textContent = '—');
+    ['sum-sb','sum-oe','sum-dist','sum-trend','sum-ranges'].forEach(id => document.getElementById(id).innerHTML = '<div class="text-sm text-muted">No data</div>');
+    return;
+  }
+
+  const sums = rolls.map(r => r.dice.reduce((a,b) => a+b, 0));
+  const avg = sums.reduce((a,b) => a+b, 0) / sums.length;
+  const variance = sums.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / sums.length;
+  const std = Math.sqrt(variance);
+
+  document.getElementById('sum-avg').textContent = avg.toFixed(2);
+  document.getElementById('sum-std').textContent = std.toFixed(2);
+
+  // Small vs Big
+  const small = sums.filter(s => s <= 10).length;
+  const big = sums.filter(s => s >= 11).length;
+  const sp = (small / sums.length * 100).toFixed(1);
+  const bp = (big / sums.length * 100).toFixed(1);
+  document.getElementById('sum-sb').innerHTML = `
+    <div class="text-sm mb-8">Small (3-10): <strong>${small}</strong> (${sp}%)</div>
+    <div class="text-sm mb-8">Big (11-18): <strong>${big}</strong> (${bp}%)</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${sp}%;background:var(--blue);"></div></div>
+  `;
+
+  // Odd vs Even
+  const odd = sums.filter(s => s % 2 !== 0).length;
+  const even = sums.filter(s => s % 2 === 0).length;
+  const op = (odd / sums.length * 100).toFixed(1);
+  const ep = (even / sums.length * 100).toFixed(1);
+  document.getElementById('sum-oe').innerHTML = `
+    <div class="text-sm mb-8">Odd: <strong>${odd}</strong> (${op}%)</div>
+    <div class="text-sm mb-8">Even: <strong>${even}</strong> (${ep}%)</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${op}%;background:var(--purple);"></div></div>
+  `;
+
+  // Sum distribution
+  const sumFreq = {};
+  for (let s = 3; s <= 18; s++) sumFreq[s] = 0;
+  sums.forEach(s => sumFreq[s]++);
+  const maxSumFreq = Math.max(...Object.values(sumFreq), 1);
+  let distHtml = '';
+  for (let s = 3; s <= 18; s++) {
+    const w = (sumFreq[s] / maxSumFreq * 100);
+    const pct = (sumFreq[s] / sums.length * 100).toFixed(1);
+    distHtml += `<div class="sum-bar-container">
+      <div class="sum-bar-label"><span>Sum ${s}</span><span>${sumFreq[s]} (${pct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${w}%;background:var(--cyan);">${sumFreq[s] > 0 ? sumFreq[s] : ''}</div></div>
+    </div>`;
+  }
+  document.getElementById('sum-dist').innerHTML = distHtml;
+
+  // Sum trend (last 20)
+  const recent = sums.slice(-20);
+  let trendHtml = '<div style="display:flex;align-items:end;gap:4px;height:100px;">';
+  const trendMax = 18, trendMin = 3;
+  recent.forEach((s, i) => {
+    const h = ((s - trendMin) / (trendMax - trendMin)) * 100;
+    const color = s <= 10 ? 'var(--blue)' : 'var(--orange)';
+    trendHtml += `<div style="flex:1;height:${h}%;background:${color};border-radius:2px 2px 0 0;min-width:4px;" title="Roll ${sums.length-recent.length+i+1}: Sum ${s}"></div>`;
+  });
+  trendHtml += '</div><div class="text-xs text-muted" style="margin-top:4px;">Last ${recent.length} rolls</div>';
+  document.getElementById('sum-trend').innerHTML = trendHtml;
+
+  // Sum ranges
+  const ranges = [
+    { label: 'Low (3-7)', min: 3, max: 7, color: 'var(--blue)' },
+    { label: 'Mid-Low (8-10)', min: 8, max: 10, color: 'var(--cyan)' },
+    { label: 'Mid-High (11-13)', min: 11, max: 13, color: 'var(--orange)' },
+    { label: 'High (14-18)', min: 14, max: 18, color: 'var(--red)' }
+  ];
+  let rangeHtml = '';
+  ranges.forEach(rng => {
+    const count = sums.filter(s => s >= rng.min && s <= rng.max).length;
+    const pct = (count / sums.length * 100).toFixed(1);
+    rangeHtml += `<div class="sum-bar-container">
+      <div class="sum-bar-label"><span>${rng.label}</span><span>${count} (${pct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${pct}%;background:${rng.color};">${count}</div></div>
+    </div>`;
+  });
+  document.getElementById('sum-ranges').innerHTML = rangeHtml;
+}
+
+function renderStats() {
+  const session = getSession();
+  const log = session.predictionLog;
+
+  document.getElementById('stat-total-dice').textContent = getTotalDice();
+  document.getElementById('stat-predictions').textContent = log.length;
+  const correct = log.filter(l => l.hit).length;
+  document.getElementById('stat-correct').textContent = correct;
+
+  // Accuracy over time
+  if (log.length > 0) {
+    let running = 0;
+    const points = log.map((l, i) => {
+      if (l.hit) running++;
+      return { roll: i + 1, acc: (running / (i + 1) * 100) };
+    });
+    const maxPts = points.slice(-50);
+    let chartHtml = '<div style="display:flex;align-items:end;gap:2px;height:120px;">';
+    maxPts.forEach(pt => {
+      const h = pt.acc;
+      const color = pt.acc >= 42.1 ? 'var(--green)' : 'var(--red)';
+      chartHtml += `<div style="flex:1;height:${h}%;background:${color};border-radius:2px 2px 0 0;min-width:3px;" title="Pred #${pt.roll}: ${pt.acc.toFixed(1)}%"></div>`;
+    });
+    chartHtml += '</div>';
+    chartHtml += `<div class="text-xs text-muted" style="margin-top:4px;">42.1% baseline shown by color (green = above)</div>`;
+    document.getElementById('stat-acc-chart').innerHTML = chartHtml;
+  } else {
+    document.getElementById('stat-acc-chart').innerHTML = '<div class="text-sm text-muted">No predictions yet</div>';
+  }
+
+  // Prediction log
+  if (log.length > 0) {
+    let logHtml = '<table><thead><tr><th>Roll</th><th>Predicted</th><th>Actual</th><th>Result</th></tr></thead><tbody>';
+    log.slice(-20).reverse().forEach(l => {
+      logHtml += `<tr>
+        <td>#${l.roll}</td>
+        <td style="font-weight:700;color:var(--accent);">${l.predicted}</td>
+        <td>${l.actual.join(', ')}</td>
+        <td><span class="badge ${l.hit ? 'badge-green' : 'badge-red'}">${l.hit ? 'HIT ✓' : 'MISS ✗'}</span></td>
+      </tr>`;
+    });
+    logHtml += '</tbody></table>';
+    document.getElementById('stat-pred-log').innerHTML = logHtml;
+  } else {
+    document.getElementById('stat-pred-log').innerHTML = '<div class="text-sm text-muted">No predictions yet</div>';
+  }
+
+  // Engine weights
+  const w = session.engineWeights;
+  const engines = [
+    { key: 'zscore', label: 'Z-Score Reversion', icon: '📊' },
+    { key: 'markov', label: 'Markov Transitions', icon: '🔗' },
+    { key: 'ewma', label: 'EWMA Momentum', icon: '📈' },
+    { key: 'entropy', label: 'Shannon Entropy', icon: '🎲' },
+    { key: 'bayes', label: 'Bayesian Posterior', icon: '🧮' },
+    { key: 'chi', label: 'Chi-Squared', icon: '📐' },
+    { key: 'gap', label: 'Gap Analysis', icon: '⏱' }
+  ];
+  let wHtml = '';
+  engines.forEach(eng => {
+    const val = w[eng.key] || 1;
+    const pct = (val / 3 * 100);
+    wHtml += `<div class="signal-meter mb-8">
+      <span class="text-sm" style="min-width:160px;">${eng.icon} ${eng.label}</span>
+      <div class="signal-bar"><div class="signal-fill" style="width:${pct}%;background:var(--accent);left:0;"></div></div>
+      <span class="signal-label fw-700">${val.toFixed(2)}</span>
+    </div>`;
+  });
+  document.getElementById('stat-weights').innerHTML = wHtml;
+}
+
+function renderPrediction() {
+  const session = getSession();
+  const activePred = session.predictions.find(p => !p.resolved);
+
+  if (!activePred || session.rolls.length < 5) {
+    document.getElementById('pred-number').textContent = '—';
+    document.getElementById('pred-conf-val').textContent = '—';
+    document.getElementById('pred-reason').textContent = session.rolls.length < 5 ? `Need ${5 - session.rolls.length} more rolls` : 'Add next roll to generate prediction';
+    document.getElementById('pred-sub').textContent = '';
+    document.getElementById('pred-ring-fill').style.strokeDashoffset = 326.7;
+    document.getElementById('pred-all-scores').innerHTML = '<div class="text-sm text-muted">Waiting for prediction...</div>';
+    document.getElementById('pred-breakdown').innerHTML = '';
+    document.getElementById('pred-engines').innerHTML = '';
+    renderPredHistory();
+    return;
+  }
+
+  const pred = activePred;
+  document.getElementById('pred-number').textContent = pred.number;
+  document.getElementById('pred-conf-val').textContent = pred.confidence + '%';
+  document.getElementById('pred-ring-fill').style.strokeDashoffset = 326.7 * (1 - pred.confidence / 100);
+
+  // Reason
+  const gaps = calcGaps();
+  const ewma = calcEWMA();
+  let reasons = [];
+  if (gaps[pred.number] > 2) reasons.push('overdue by gap');
+  if (ewma[pred.number] > 0.2) reasons.push('EWMA momentum high');
+  const zs = calcZScores();
+  if (zs[pred.number] < -0.5) reasons.push('z-score reversion signal');
+  document.getElementById('pred-reason').textContent = reasons.length > 0 ? 'Signals: ' + reasons.join(', ') : 'Composite signal strongest';
+  document.getElementById('pred-sub').textContent = `Base probability: 42.1% | Engine confidence: ${pred.confidence}%`;
+
+  // All scores
+  const sorted = Object.entries(pred.scores).sort((a,b) => b[1] - a[1]);
+  let scHtml = '';
+  sorted.forEach(([n, score], i) => {
+    const isTop = parseInt(n) === pred.number;
+    scHtml += `<div class="signal-meter mb-8">
+      <span style="min-width:30px;font-weight:${isTop?'800':'600'};font-size:${isTop?'1.2rem':'1rem'};color:${isTop?'var(--accent)':'var(--text-primary)'};">${n}</span>
+      <div class="signal-bar"><div class="signal-fill" style="width:${score}%;background:${isTop?'var(--accent)':'var(--border)'};left:0;"></div></div>
+      <span class="signal-label fw-700" style="color:${isTop?'var(--accent)':'var(--text-secondary)'};">${score.toFixed(1)}</span>
+      ${i === 0 ? '<span class="badge badge-amber">TOP</span>' : ''}
+    </div>`;
+  });
+  document.getElementById('pred-all-scores').innerHTML = scHtml;
+
+  // Breakdown
+  if (pred.engines && pred.composite) {
+    const engineNames = { zscore:'Z-Score', markov:'Markov', ewma:'EWMA', entropy:'Entropy', bayes:'Bayes', chi:'Chi²', gap:'Gap' };
+    const w = session.engineWeights;
+    let bdHtml = '<table><thead><tr><th>Engine</th>';
+    for (let n = 1; n <= 6; n++) bdHtml += `<th>${n}</th>`;
+    bdHtml += '<th>Weight</th></tr></thead><tbody>';
+    for (const eng of Object.keys(pred.engines)) {
+      bdHtml += `<tr><td class="fw-700">${engineNames[eng] || eng}</td>`;
+      for (let n = 1; n <= 6; n++) {
+        const val = pred.engines[eng][n] || 0;
+        const color = val > 0.05 ? 'var(--green)' : val < -0.05 ? 'var(--red)' : 'var(--text-muted)';
+        bdHtml += `<td style="color:${color};font-weight:600;">${val.toFixed(3)}</td>`;
+      }
+      bdHtml += `<td class="text-accent fw-700">${(w[eng]||1).toFixed(2)}</td></tr>`;
+    }
+    bdHtml += '<tr style="border-top:2px solid var(--border);"><td class="fw-700 text-accent">COMPOSITE</td>';
+    for (let n = 1; n <= 6; n++) {
+      const val = pred.composite[n] || 0;
+      const isMax = n === pred.number;
+      bdHtml += `<td style="font-weight:${isMax?'800':'600'};color:${isMax?'var(--accent)':'var(--text-primary)'};">${val.toFixed(3)}</td>`;
+    }
+    bdHtml += '<td></td></tr></tbody></table>';
+    document.getElementById('pred-breakdown').innerHTML = bdHtml;
+  }
+
+  // Engine contributions
+  if (pred.engines) {
+    const w = session.engineWeights;
+    let engHtml = '';
+    const contributions = {};
+    for (const eng of Object.keys(pred.engines)) {
+      contributions[eng] = (pred.engines[eng][pred.number] || 0) * (w[eng] || 1);
+    }
+    const sorted = Object.entries(contributions).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const engineNames = { zscore:'Z-Score', markov:'Markov', ewma:'EWMA', entropy:'Entropy', bayes:'Bayes', chi:'Chi²', gap:'Gap' };
+    const maxC = Math.max(...sorted.map(([,v]) => Math.abs(v)), 0.001);
+    sorted.forEach(([eng, val]) => {
+      const w = Math.abs(val) / maxC * 100;
+      const positive = val >= 0;
+      engHtml += `<div class="signal-meter mb-8">
+        <span class="text-sm" style="min-width:80px;">${engineNames[eng]||eng}</span>
+        <div class="signal-bar"><div class="signal-fill" style="width:${w}%;background:${positive?'var(--green)':'var(--red)'};left:0;"></div></div>
+        <span class="signal-label" style="color:${positive?'var(--green)':'var(--red)'};">${val >= 0? '+':''}${val.toFixed(3)}</span>
+      </div>`;
+    });
+    document.getElementById('pred-engines').innerHTML = engHtml;
+  }
+
+  renderPredHistory();
+}
+
+function renderPredHistory() {
+  const session = getSession();
+  const log = session.predictionLog;
+  if (log.length === 0) {
+    document.getElementById('pred-history').innerHTML = '<div class="text-sm text-muted">No history</div>';
+    return;
+  }
+  let html = '';
+  log.slice(-15).reverse().forEach(l => {
+    html += `<div class="flex-between mb-8" style="padding:6px;background:var(--bg-primary);border-radius:4px;">
+      <span class="text-sm">#${l.roll}: predicted <strong class="text-accent">${l.predicted}</strong> → [${l.actual.join(',')}]</span>
+      <span class="badge ${l.hit ? 'badge-green' : 'badge-red'}">${l.hit ? 'HIT' : 'MISS'}</span>
+    </div>`;
+  });
+  document.getElementById('pred-history').innerHTML = html;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+refreshAll();
+document.getElementById('d1').focus();
+</script>
+</body>
+</html>
