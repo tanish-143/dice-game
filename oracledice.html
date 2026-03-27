@@ -248,6 +248,42 @@ td { color: var(--text-secondary); }
 .sum-bar-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px; }
 .sum-bar { height: 20px; background: var(--bg-primary); border-radius: 4px; overflow: hidden; }
 .sum-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; display: flex; align-items: center; padding-left: 6px; font-size: 0.7rem; font-weight: 600; color: #000; }
+.monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.monitor-card {
+  padding: 12px 8px; border-radius: 8px; text-align: center;
+  border: 2px solid var(--border); background: var(--bg-primary);
+  transition: all 0.4s ease; opacity: 0.28; filter: grayscale(0.8);
+}
+.monitor-card.mon-active {
+  opacity: 1; filter: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 22px rgba(245,158,11,0.4), 0 0 8px rgba(245,158,11,0.2);
+  animation: mon-pulse 1.8s ease-in-out infinite;
+}
+.monitor-card.mon-correct {
+  opacity: 1; filter: none;
+  border-color: var(--green);
+  box-shadow: 0 0 18px rgba(34,197,94,0.3);
+}
+.monitor-card.mon-wrong {
+  opacity: 0.15; filter: grayscale(1);
+  border-color: var(--red);
+}
+@keyframes mon-pulse {
+  0%,100% { box-shadow: 0 0 22px rgba(245,158,11,0.4); }
+  50%      { box-shadow: 0 0 38px rgba(245,158,11,0.6); }
+}
+.mon-icon { font-size: 1.4rem; margin-bottom: 4px; }
+.mon-name { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-muted); margin-bottom: 4px; }
+.mon-pick { font-size: 1.6rem; font-weight: 900; color: var(--accent); line-height: 1; margin: 4px 0 2px; }
+.mon-signal { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); }
+.mon-weight { font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; }
+.mon-status { font-size: 0.65rem; margin-top: 4px; min-height: 14px; }
 @media (max-width: 768px) {
   .header { padding: 12px 16px; }
   .header h1 { font-size: 1.1rem; }
@@ -282,6 +318,7 @@ td { color: var(--text-secondary); }
   <button class="tab-btn" data-tab="signals">Math Signals</button>
   <button class="tab-btn" data-tab="sums">Sum Analysis</button>
   <button class="tab-btn" data-tab="stats">Statistics</button>
+  <button class="tab-btn" data-tab="oddeven">Odd / Even</button>
   <button class="tab-btn" data-tab="prediction">Prediction Engine</button>
 </div>
 
@@ -299,20 +336,21 @@ td { color: var(--text-secondary); }
       <div class="dice-input-group">
         <div>
           <input type="number" class="dice-input" id="d1" min="1" max="6" placeholder="·">
-          <div class="dice-label">Die 1</div>
+          <div class="dice-label">🎲</div>
         </div>
         <div>
           <input type="number" class="dice-input" id="d2" min="1" max="6" placeholder="·">
-          <div class="dice-label">Die 2</div>
+          <div class="dice-label">🎲</div>
         </div>
         <div>
           <input type="number" class="dice-input" id="d3" min="1" max="6" placeholder="·">
-          <div class="dice-label">Die 3</div>
+          <div class="dice-label">🎲</div>
         </div>
       </div>
       <button class="btn btn-primary" id="btn-add" onclick="addRoll()">Add Roll</button>
       <button class="btn btn-secondary btn-sm" onclick="randomRoll()">🎲 Random</button>
     </div>
+    <div class="text-xs text-muted" style="margin-top:6px;opacity:0.7;">All dice are identical — enter values in any order.</div>
   </div>
 
   <div class="grid grid-4 mb-16">
@@ -341,6 +379,7 @@ td { color: var(--text-secondary); }
         <div class="prediction-number" id="dash-prediction">—</div>
         <div class="text-sm text-muted" id="dash-pred-conf">Enter at least 5 rolls</div>
       </div>
+      <div id="dash-bs-oe" style="margin-top:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;"></div>
     </div>
     <div class="card">
       <div class="card-title">Number Frequency</div>
@@ -499,8 +538,68 @@ td { color: var(--text-secondary); }
   </div>
 </div>
 
+<!-- ===== ODD / EVEN TAB ===== -->
+<div class="tab-content" id="tab-oddeven">
+  <!-- Prediction Card -->
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">🔢 Next Sum Prediction</div>
+      <div id="oe-prediction" style="text-align:center;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Signal Breakdown</div>
+      <div id="oe-signals"></div>
+    </div>
+  </div>
+  <!-- History Trail & Stats -->
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">🕐 Parity History Trail</div>
+      <div id="oe-trail"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Running Ratio</div>
+      <div id="oe-ratio-chart"></div>
+    </div>
+  </div>
+  <!-- Distribution & Streaks -->
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">⚖ Odd vs Even Distribution</div>
+      <div id="oe-distribution"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔥 Streak Analysis</div>
+      <div id="oe-streaks"></div>
+    </div>
+  </div>
+  <!-- Pattern Table -->
+  <div class="card mb-16">
+    <div class="card-title">📋 Parity Pattern Log</div>
+    <div style="max-height:350px;overflow-y:auto;" id="oe-log"></div>
+  </div>
+  <!-- Big/Small Section -->
+  <div class="grid grid-2 mb-16">
+    <div class="card">
+      <div class="card-title">📏 Big / Small Prediction</div>
+      <div id="oe-bigsmall" style="text-align:center;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📏 Big vs Small Distribution</div>
+      <div id="oe-bs-dist"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== PREDICTION ENGINE TAB ===== -->
 <div class="tab-content" id="tab-prediction">
+  <div class="card mb-16">
+    <div class="card-title">🔬 Active Logic Monitor</div>
+    <div class="text-xs text-muted mb-12">
+      Glowing = strongest engine for current prediction. After result: <span style="color:var(--green);">✅ green = correct</span>, <span style="color:var(--red);">✗ red = missed</span>.
+    </div>
+    <div class="monitor-grid" id="monitor-grid"></div>
+  </div>
   <div class="grid grid-2 mb-16">
     <div class="card" style="grid-column: span 1;">
       <div class="card-title">🎯 Primary Prediction</div>
@@ -522,6 +621,14 @@ td { color: var(--text-secondary); }
       <div class="card-title">All Number Scores</div>
       <div id="pred-all-scores"></div>
     </div>
+  </div>
+  <div class="card mb-16" id="pred-parity-card">
+    <div class="card-title">🔢 Sum Parity Prediction</div>
+    <div id="pred-parity-content"></div>
+  </div>
+  <div class="card mb-16" id="pred-bigsmall-card">
+    <div class="card-title">📏 Big / Small Prediction</div>
+    <div id="pred-bigsmall-content"></div>
   </div>
   <div class="card mb-16">
     <div class="card-title">Composite Signal Breakdown</div>
@@ -574,7 +681,7 @@ function defaultState() {
         rolls: [],
         predictions: [],
         predictionLog: [],
-        engineWeights: { zscore: 1, markov: 1.2, ewma: 0.8, entropy: 0.7, bayes: 1, chi: 0.6, gap: 1.1 },
+        engineWeights: { zscore: 1, markov: 1.2, ewma: 0.8, entropy: 0.7, bayes: 1, chi: 0.6, gap: 1.1, parity: 1.0 },
         createdAt: Date.now()
       }
     },
@@ -589,7 +696,14 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.sessions) return parsed;
+      if (parsed && parsed.sessions) {
+        // Backward compat: ensure new engine weights exist
+        for (const name of Object.keys(parsed.sessions)) {
+          const w = parsed.sessions[name].engineWeights;
+          if (w && w.parity === undefined) w.parity = 1.0;
+        }
+        return parsed;
+      }
     }
   } catch(e) { /* ignore */ }
   return defaultState();
@@ -613,7 +727,7 @@ function addRoll() {
   if (![d1,d2,d3].every(v => v >= 1 && v <= 6)) {
     shakeInput(); return;
   }
-  const roll = [d1, d2, d3];
+  const roll = [d1, d2, d3].sort((a, b) => a - b);
   const session = getSession();
 
   // Check previous prediction
@@ -907,6 +1021,134 @@ function gapSignals() {
   return signals;
 }
 
+// Sum Parity History & Prediction
+function getSumParityHistory() {
+  return getSession().rolls.map(r => {
+    const sum = r.dice.reduce((a,b) => a+b, 0);
+    return { sum, parity: sum % 2 !== 0 ? 'odd' : 'even' };
+  });
+}
+
+function predictSumParity() {
+  const history = getSumParityHistory();
+  if (history.length < 3) return null;
+
+  const parities = history.map(h => h.parity);
+
+  // Signal 1: EWMA on oddRatio (alpha=0.3)
+  let ewmaOdd = 0.5;
+  parities.forEach(p => {
+    ewmaOdd = 0.3 * (p === 'odd' ? 1 : 0) + 0.7 * ewmaOdd;
+  });
+
+  // Signal 2: Streak reversion — if 3+ in a row, flip signal
+  const recent = parities.slice(-6);
+  let streakLen = 1;
+  for (let i = recent.length - 2; i >= 0; i--) {
+    if (recent[i] === recent[recent.length - 1]) streakLen++;
+    else break;
+  }
+  const lastParity = recent[recent.length - 1];
+  let reversionBoost = 0;
+  if (streakLen >= 3) reversionBoost = lastParity === 'odd' ? -0.18 : 0.18;
+
+  // Signal 3: Bayesian — how often odd has appeared
+  const oddCount = parities.filter(p => p === 'odd').length;
+  const bayesOdd = (oddCount + 1) / (parities.length + 2);
+
+  // Signal 4: Alternation pattern — if last 4 alternate, expect continuation
+  let alternates = 0;
+  for (let i = recent.length - 1; i > 0; i--) {
+    if (recent[i] !== recent[i-1]) alternates++;
+    else break;
+  }
+  const altBoost = alternates >= 3 ? (lastParity === 'odd' ? -0.1 : 0.1) : 0;
+
+  // Combine: positive = lean odd, negative = lean even
+  const oddSignal = ewmaOdd + reversionBoost + (bayesOdd - 0.5) * 0.6 + altBoost;
+  const evenSignal = (1 - ewmaOdd) - reversionBoost + (0.5 - bayesOdd) * 0.6 - altBoost;
+
+  const prediction = oddSignal > evenSignal ? 'odd' : 'even';
+  const rawConf = Math.abs(oddSignal - evenSignal);
+  const confidence = Math.round(Math.min(85, Math.max(40, 50 + rawConf * 35)));
+
+  // Streak message for UI
+  let streakMsg = '';
+  if (streakLen >= 4) streakMsg = `${streakLen}× ${lastParity.toUpperCase()} streak — flip likely`;
+  else if (streakLen >= 3) streakMsg = `${streakLen}× ${lastParity.toUpperCase()} streak — watch for turn`;
+  else if (alternates >= 3) streakMsg = 'Alternating pattern detected';
+  else streakMsg = `Last: ${lastParity.toUpperCase()}`;
+
+  return { prediction, confidence, streakLen, streakMsg, lastParity, ewmaOdd, oddSignal, evenSignal };
+}
+
+function parityBiasSignals() {
+  const pred = predictSumParity();
+  if (!pred) return { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+  const signals = {};
+  for (let n = 1; n <= 6; n++) {
+    const nIsOdd = n % 2 !== 0;
+    const aligned = (pred.prediction === 'odd' && nIsOdd) ||
+                    (pred.prediction === 'even' && !nIsOdd);
+    signals[n] = aligned ? 0.12 * (pred.confidence / 100) : -0.06 * (pred.confidence / 100);
+  }
+  return signals;
+}
+
+// Big/Small History & Prediction
+function getBigSmallHistory() {
+  return getSession().rolls.map(r => {
+    const sum = r.dice.reduce((a,b) => a+b, 0);
+    return { sum, category: sum <= 10 ? 'small' : 'big' };
+  });
+}
+
+function predictBigSmall() {
+  const history = getBigSmallHistory();
+  if (history.length < 3) return null;
+
+  const sums = history.map(h => h.sum);
+  const cats = history.map(h => h.category);
+
+  // Signal 1: EWMA on sum (alpha=0.25)
+  let ewmaSum = 10.5;
+  sums.forEach(s => { ewmaSum = 0.25 * s + 0.75 * ewmaSum; });
+
+  // Signal 2: Streak reversion
+  const recent = cats.slice(-6);
+  let streakLen = 1;
+  for (let i = recent.length - 2; i >= 0; i--) {
+    if (recent[i] === recent[recent.length - 1]) streakLen++;
+    else break;
+  }
+  const lastCat = recent[recent.length - 1];
+  let reversionBoost = 0;
+  if (streakLen >= 3) reversionBoost = lastCat === 'big' ? -0.22 : 0.22;
+
+  // Signal 3: Z-score on recent sums vs expected 10.5
+  const recentSums = sums.slice(-10);
+  const recentAvg = recentSums.reduce((a,b) => a+b,0) / recentSums.length;
+  const zBias = (10.5 - recentAvg) / 3.5;
+
+  // Signal 4: Bayesian
+  const bigCount = cats.filter(c => c === 'big').length;
+  const bayesBig = (bigCount + 1) / (cats.length + 2);
+
+  // Combine: positive bigSignal = lean Big
+  const bigSignal = (ewmaSum - 10.5) / 5 + reversionBoost + zBias * 0.25 + (bayesBig - 0.5) * 0.45;
+
+  const prediction = bigSignal >= 0 ? 'big' : 'small';
+  const rawConf = Math.abs(bigSignal);
+  const confidence = Math.round(Math.min(85, Math.max(40, 50 + rawConf * 38)));
+
+  let streakMsg = '';
+  if (streakLen >= 4) streakMsg = `${streakLen}× ${lastCat.toUpperCase()} streak — flip expected`;
+  else if (streakLen >= 3) streakMsg = `${streakLen}× ${lastCat.toUpperCase()} streak — watch for turn`;
+  else streakMsg = `EWMA sum: ${ewmaSum.toFixed(1)} (threshold 10.5)`;
+
+  return { prediction, confidence, streakLen, streakMsg, lastCat, ewmaSum, bigSignal };
+}
+
 // Composite Weighted Signal
 function generatePrediction() {
   const session = getSession();
@@ -918,7 +1160,8 @@ function generatePrediction() {
     entropy: entropySignals(),
     bayes: bayesSignals(),
     chi: chiSignals(),
-    gap: gapSignals()
+    gap: gapSignals(),
+    parity: parityBiasSignals()
   };
 
   const composite = {};
@@ -969,10 +1212,8 @@ function adaptWeights(pred, hit) {
   for (const eng of Object.keys(pred.engines)) {
     const signal = pred.engines[eng][pred.number] || 0;
     if (hit) {
-      // Reward engines that pointed toward the winning number
       if (signal > 0) w[eng] = Math.min(3, w[eng] + lr);
     } else {
-      // Penalize engines that strongly recommended this number
       if (signal > 0) w[eng] = Math.max(0.1, w[eng] - lr * 0.5);
     }
   }
@@ -996,7 +1237,7 @@ function newSession() {
   if (state.sessions[safeName]) { alert('Session exists!'); return; }
   state.sessions[safeName] = {
     rolls: [], predictions: [], predictionLog: [],
-    engineWeights: { zscore: 1, markov: 1.2, ewma: 0.8, entropy: 0.7, bayes: 1, chi: 0.6, gap: 1.1 },
+    engineWeights: { zscore: 1, markov: 1.2, ewma: 0.8, entropy: 0.7, bayes: 1, chi: 0.6, gap: 1.1, parity: 1.0 },
     createdAt: Date.now()
   };
   state.currentSession = safeName;
@@ -1110,6 +1351,7 @@ function refreshAll() {
   renderSignals();
   renderSums();
   renderStats();
+  renderOddEven();
   renderPrediction();
 }
 
@@ -1172,6 +1414,22 @@ function renderDashboard() {
     document.getElementById('dash-prediction').textContent = rolls.length < 5 ? '—' : '✓';
     document.getElementById('dash-pred-conf').textContent = rolls.length < 5 ? `Need ${5 - rolls.length} more rolls` : 'Add roll to see prediction';
   }
+
+  // Mini Big/Small + Odd/Even badges on dashboard
+  const bsPred = predictBigSmall();
+  const oePred = predictSumParity();
+  let dashBSOE = '';
+  if (bsPred) {
+    const c = bsPred.prediction === 'big' ? '#f97316' : '#06b6d4';
+    dashBSOE += `<span style="padding:3px 10px;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid ${c};color:${c};font-size:0.75rem;font-weight:700;">
+      📏 ${bsPred.prediction.toUpperCase()} ${bsPred.confidence}%</span>`;
+  }
+  if (oePred) {
+    const c = oePred.prediction === 'odd' ? '#a855f7' : '#3b82f6';
+    dashBSOE += `<span style="padding:3px 10px;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid ${c};color:${c};font-size:0.75rem;font-weight:700;">
+      🔢 ${oePred.prediction.toUpperCase()} ${oePred.confidence}%</span>`;
+  }
+  document.getElementById('dash-bs-oe').innerHTML = dashBSOE;
 
   // Frequency tiles
   const freq = getFrequencies();
@@ -1570,7 +1828,8 @@ function renderStats() {
     { key: 'entropy', label: 'Shannon Entropy', icon: '🎲' },
     { key: 'bayes', label: 'Bayesian Posterior', icon: '🧮' },
     { key: 'chi', label: 'Chi-Squared', icon: '📐' },
-    { key: 'gap', label: 'Gap Analysis', icon: '⏱' }
+    { key: 'gap', label: 'Gap Analysis', icon: '⏱' },
+    { key: 'parity', label: 'Sum Parity Bias', icon: '🔢' }
   ];
   let wHtml = '';
   engines.forEach(eng => {
@@ -1583,6 +1842,407 @@ function renderStats() {
     </div>`;
   });
   document.getElementById('stat-weights').innerHTML = wHtml;
+}
+
+// ============================================================
+// ODD / EVEN TAB
+// ============================================================
+function buildNumberSuggestion(parityPred) {
+  const isOdd = parityPred.prediction === 'odd';
+  const aligned = isOdd ? [1, 3, 5] : [2, 4, 6];
+  const opposed = isOdd ? [2, 4, 6] : [1, 3, 5];
+
+  // Score each aligned number using engine data
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  const gaps = calcGaps();
+  const ewma = calcEWMA();
+  const zs = calcZScores();
+  const bias = parityBiasSignals();
+
+  const scored = aligned.map(n => {
+    let score = 0;
+    // Gap overdue bonus — longer gap = more likely
+    score += Math.min(gaps[n], 8) * 0.15;
+    // Z-score reversion — negative z = underrepresented = due
+    score += Math.max(0, -zs[n]) * 0.25;
+    // EWMA momentum — recent trend
+    score += ewma[n] * 0.3;
+    // Parity bias signal
+    score += (bias[n] || 0) * 2;
+    // Frequency deficit — below expected 16.7%
+    const pct = total > 0 ? freq[n] / total : 1/6;
+    score += Math.max(0, 1/6 - pct) * 3;
+    return { n, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  const bestColor = isOdd ? '#a855f7' : '#3b82f6';
+
+  // Build tiles for aligned numbers (sorted best→worst)
+  let tiles = scored.map((s, i) => {
+    const isBest = i === 0;
+    const glow = isBest ? `box-shadow:0 0 16px ${bestColor}55;` : '';
+    const border = isBest ? `border:2px solid ${bestColor};` : 'border:2px solid var(--border);';
+    const opacity = isBest ? '1' : '0.7';
+    const size = isBest ? 'font-size:1.8rem;' : 'font-size:1.3rem;';
+    return `<div style="display:flex;flex-direction:column;align-items:center;padding:10px 14px;border-radius:10px;background:var(--bg-primary);${border}${glow}opacity:${opacity};min-width:56px;">
+      <span style="${size}font-weight:900;color:${bestColor};">${s.n}</span>
+      <span style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">gap ${gaps[s.n]}</span>
+      <span style="font-size:0.6rem;color:var(--text-muted);">z ${zs[s.n].toFixed(1)}</span>
+    </div>`;
+  }).join('');
+
+  // Opposing numbers (dimmed)
+  let oppTiles = opposed.map(n => {
+    return `<div style="display:flex;flex-direction:column;align-items:center;padding:6px 10px;border-radius:8px;background:var(--bg-primary);border:1px solid var(--border);opacity:0.3;min-width:40px;">
+      <span style="font-size:1rem;font-weight:700;color:var(--text-muted);">${n}</span>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+      <div class="text-xs text-muted" style="margin-bottom:8px;">🎯 Suggested Numbers (${isOdd ? 'odd' : 'even'}-aligned)</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;">${tiles}</div>
+      <div style="text-align:center;margin-bottom:8px;">
+        <span style="font-size:0.7rem;padding:3px 12px;border-radius:10px;background:${bestColor}22;color:${bestColor};font-weight:700;">
+          ★ Best pick: ${best.n}
+        </span>
+      </div>
+      <div class="text-xs text-muted" style="margin-bottom:6px;">Unlikely (opposite parity):</div>
+      <div style="display:flex;gap:6px;justify-content:center;">${oppTiles}</div>
+    </div>
+  `;
+}
+
+function buildTripleSuggestion() {
+  const session = getSession();
+  const rolls = session.rolls;
+  if (rolls.length < 3) return '';
+
+  const freq = getFrequencies();
+  const total = getTotalDice();
+  const gaps = calcGaps();
+  const zs = calcZScores();
+  const ewma = calcEWMA();
+
+  // Count how many times each triple has appeared
+  const tripleCount = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+  let lastTripleAgo = { 1: Infinity, 2: Infinity, 3: Infinity, 4: Infinity, 5: Infinity, 6: Infinity };
+  rolls.forEach((r, i) => {
+    const s = [...r.dice].sort();
+    if (s[0] === s[1] && s[1] === s[2]) {
+      tripleCount[s[0]]++;
+      lastTripleAgo[s[0]] = rolls.length - i;
+    }
+  });
+  const totalTriples = Object.values(tripleCount).reduce((a, b) => a + b, 0);
+
+  // Gap since any triple
+  let anyTripleGap = 0;
+  for (let i = rolls.length - 1; i >= 0; i--) {
+    const s = [...rolls[i].dice].sort();
+    if (s[0] === s[1] && s[1] === s[2]) break;
+    anyTripleGap++;
+  }
+
+  // Score each number for triple likelihood
+  const scored = [];
+  for (let n = 1; n <= 6; n++) {
+    let score = 0;
+    // Individual die frequency — higher freq = more likely to triple
+    score += (freq[n] / Math.max(total, 1)) * 2;
+    // EWMA momentum — trending dice more likely
+    score += ewma[n] * 1.5;
+    // Gap since last triple of this number — overdue bonus
+    const tGap = lastTripleAgo[n] === Infinity ? rolls.length : lastTripleAgo[n];
+    score += Math.min(tGap, 50) * 0.01;
+    // If this triple has never appeared, slight boost
+    if (tripleCount[n] === 0 && rolls.length > 10) score += 0.15;
+    // Z-score — if die is cold, triple is less likely
+    score += Math.max(0, zs[n]) * 0.1;
+    scored.push({ n, score, count: tripleCount[n], gap: tGap });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+
+  // Probability context: theoretical triple chance per roll = 6 * (1/6)^3 = 1/36 ≈ 2.78%
+  const tripleRate = rolls.length > 0 ? (totalTriples / rolls.length * 100).toFixed(1) : '0.0';
+
+  let tilesHtml = scored.map((s, i) => {
+    const isBest = i === 0;
+    const glow = isBest ? 'box-shadow:0 0 14px rgba(245,158,11,0.4);' : '';
+    const border = isBest ? 'border:2px solid var(--accent);' : 'border:1px solid var(--border);';
+    const opacity = isBest ? '1' : String(0.8 - i * 0.08);
+    return `<div style="display:flex;flex-direction:column;align-items:center;padding:8px 10px;border-radius:10px;background:var(--bg-primary);${border}${glow}opacity:${opacity};min-width:50px;">
+      <span style="font-size:${isBest ? '1.1rem' : '0.85rem'};font-weight:900;color:var(--accent);">${s.n}-${s.n}-${s.n}</span>
+      <span style="font-size:0.55rem;color:var(--text-muted);margin-top:2px;">×${s.count} hit${s.count !== 1 ? 's' : ''}</span>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+      <div class="text-xs text-muted" style="margin-bottom:8px;">🎲 Triple Suggestion</div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;">${tilesHtml}</div>
+      <div style="text-align:center;margin-bottom:6px;">
+        <span style="font-size:0.7rem;padding:3px 12px;border-radius:10px;background:var(--accent)22;color:var(--accent);font-weight:700;">
+          ★ Most likely triple: ${best.n}-${best.n}-${best.n}
+        </span>
+      </div>
+      <div class="text-xs text-muted" style="text-align:center;">
+        Triples seen: ${totalTriples} of ${rolls.length} rolls (${tripleRate}%) · Last triple: ${anyTripleGap === rolls.length ? 'none yet' : anyTripleGap + ' rolls ago'} · Expected: ~2.8%
+      </div>
+    </div>
+  `;
+}
+
+function renderOddEven() {
+  const session = getSession();
+  const rolls = session.rolls;
+
+  // ── Not enough data ──
+  if (rolls.length < 3) {
+    ['oe-prediction','oe-signals','oe-trail','oe-ratio-chart','oe-distribution','oe-streaks','oe-log','oe-bigsmall','oe-bs-dist'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="text-sm text-muted">Need at least 3 rolls</div>';
+    });
+    return;
+  }
+
+  const parityHist = getSumParityHistory();           // [{sum, parity}]
+  const parities   = parityHist.map(h => h.parity);   // ['odd','even',...]
+  const sums       = parityHist.map(h => h.sum);
+  const totalRolls = parities.length;
+  const oddCount   = parities.filter(p => p === 'odd').length;
+  const evenCount  = totalRolls - oddCount;
+  const oddPct     = (oddCount / totalRolls * 100).toFixed(1);
+  const evenPct    = (evenCount / totalRolls * 100).toFixed(1);
+
+  // ── 1. Prediction Card ──
+  const pred = predictSumParity();
+  if (pred) {
+    const isOdd = pred.prediction === 'odd';
+    const color = isOdd ? '#a855f7' : '#3b82f6';
+    const label = pred.prediction.toUpperCase();
+
+    // Dot trail (last 12)
+    const lastDots = parityHist.slice(-12).map(h => {
+      const c = h.parity === 'odd' ? '#a855f7' : '#3b82f6';
+      const l = h.parity === 'odd' ? 'O' : 'E';
+      return `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${c};color:#fff;font-size:0.65rem;line-height:22px;text-align:center;font-weight:700;">${l}</span>`;
+    }).join(' ');
+
+    document.getElementById('oe-prediction').innerHTML = `
+      <div style="font-size:2.4rem;font-weight:900;color:${color};margin:12px 0 4px;">${label}</div>
+      <div style="font-size:1rem;color:var(--text-secondary);margin-bottom:8px;">Confidence: <strong>${pred.confidence}%</strong></div>
+      <div class="progress-bar mb-12" style="max-width:260px;margin:0 auto;"><div class="progress-fill" style="width:${pred.confidence}%;background:${color};"></div></div>
+      <div class="text-xs" style="color:${color};margin-bottom:10px;">${pred.streakMsg}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">${lastDots}</div>
+      ${buildNumberSuggestion(pred)}
+      ${buildTripleSuggestion()}
+    `;
+  } else {
+    document.getElementById('oe-prediction').innerHTML = '<div class="text-sm text-muted">Insufficient data</div>';
+  }
+
+  // ── 2. Signal Breakdown ──
+  if (pred) {
+    const signals = [
+      { name: 'EWMA Odd Ratio',    value: pred.ewmaOdd,     desc: 'Exponential weighted moving avg of odd frequency' },
+      { name: 'Odd Signal',        value: pred.oddSignal,   desc: 'Combined signal strength toward ODD' },
+      { name: 'Even Signal',       value: pred.evenSignal,  desc: 'Combined signal strength toward EVEN' },
+      { name: 'Streak Length',     value: pred.streakLen,   desc: 'Current consecutive same-parity streak' },
+    ];
+    let sigHtml = '';
+    signals.forEach(s => {
+      const numVal = typeof s.value === 'number' ? s.value : 0;
+      const barW = Math.min(100, Math.abs(numVal) * 100);
+      const barColor = numVal > 0.5 ? '#a855f7' : numVal < 0.45 ? '#3b82f6' : 'var(--accent)';
+      sigHtml += `<div class="signal-meter mb-8">
+        <span class="text-sm" style="min-width:120px;">${s.name}</span>
+        <div class="signal-bar"><div class="signal-fill" style="width:${barW}%;background:${barColor};left:0;"></div></div>
+        <span class="signal-label fw-700">${numVal.toFixed(3)}</span>
+      </div>`;
+    });
+
+    // Parity bias on individual dice (1-6)
+    const bias = parityBiasSignals();
+    sigHtml += '<div class="text-xs text-muted" style="margin:12px 0 6px;">Parity bias per die number:</div>';
+    for (let n = 1; n <= 6; n++) {
+      const v = bias[n];
+      const w = Math.min(100, Math.abs(v) * 500);
+      const c = v > 0 ? 'var(--green)' : 'var(--red)';
+      sigHtml += `<div class="signal-meter mb-8">
+        <span style="min-width:20px;font-weight:700;color:var(--accent);">${n}</span>
+        <div class="signal-bar"><div class="signal-fill" style="width:${w}%;background:${c};left:0;"></div></div>
+        <span class="signal-label" style="color:${c};">${v >= 0 ? '+' : ''}${v.toFixed(4)}</span>
+      </div>`;
+    }
+    document.getElementById('oe-signals').innerHTML = sigHtml;
+  } else {
+    document.getElementById('oe-signals').innerHTML = '<div class="text-sm text-muted">No signals yet</div>';
+  }
+
+  // ── 3. Parity History Trail (last 40) ──
+  const last40 = parityHist.slice(-40);
+  let trailHtml = '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+  last40.forEach((h, i) => {
+    const rollNum = totalRolls - last40.length + i + 1;
+    const c = h.parity === 'odd' ? '#a855f7' : '#3b82f6';
+    const lbl = h.parity === 'odd' ? 'O' : 'E';
+    trailHtml += `<span title="#${rollNum}: sum ${h.sum} (${h.parity})" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:${c};color:#fff;font-size:0.65rem;font-weight:700;cursor:default;">${lbl}</span>`;
+  });
+  trailHtml += '</div>';
+  trailHtml += `<div class="text-xs text-muted" style="margin-top:8px;">Showing last ${last40.length} of ${totalRolls} rolls</div>`;
+  document.getElementById('oe-trail').innerHTML = trailHtml;
+
+  // ── 4. Running Ratio Chart (odd % over time, last 30) ──
+  const chartSlice = Math.min(30, totalRolls);
+  let runOdd = oddCount - parities.slice(-chartSlice).filter(p => p === 'odd').length;
+  let runTotal = totalRolls - chartSlice;
+  let chartHtml = '<div style="display:flex;align-items:end;gap:2px;height:100px;">';
+  for (let i = totalRolls - chartSlice; i < totalRolls; i++) {
+    if (parities[i] === 'odd') runOdd++;
+    runTotal++;
+    const pct = runOdd / runTotal * 100;
+    const h = pct;
+    const above = pct > 50;
+    chartHtml += `<div style="flex:1;height:${h}%;background:${above ? '#a855f7' : '#3b82f6'};border-radius:2px 2px 0 0;min-width:3px;" title="Roll ${i+1}: ${pct.toFixed(1)}% odd"></div>`;
+  }
+  chartHtml += '</div>';
+  chartHtml += '<div style="position:relative;height:1px;background:var(--text-muted);opacity:0.3;margin-top:-50px;"></div>';
+  chartHtml += '<div class="text-xs text-muted" style="margin-top:52px;">Odd ratio over last ' + chartSlice + ' rolls (50% line = balanced)</div>';
+  document.getElementById('oe-ratio-chart').innerHTML = chartHtml;
+
+  // ── 5. Distribution ──
+  const maxOE = Math.max(oddCount, evenCount, 1);
+  document.getElementById('oe-distribution').innerHTML = `
+    <div class="sum-bar-container">
+      <div class="sum-bar-label"><span style="color:#a855f7;font-weight:700;">ODD</span><span>${oddCount} (${oddPct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${oddCount/maxOE*100}%;background:#a855f7;">${oddCount}</div></div>
+    </div>
+    <div class="sum-bar-container" style="margin-top:8px;">
+      <div class="sum-bar-label"><span style="color:#3b82f6;font-weight:700;">EVEN</span><span>${evenCount} (${evenPct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${evenCount/maxOE*100}%;background:#3b82f6;">${evenCount}</div></div>
+    </div>
+    <div class="text-xs text-muted" style="margin-top:12px;">
+      Ratio: ${oddCount}:${evenCount} &nbsp;|&nbsp;
+      Deviation from 50/50: <strong style="color:${Math.abs(oddCount - evenCount) > totalRolls * 0.1 ? 'var(--red)' : 'var(--green)'};">${Math.abs(oddCount - evenCount)}</strong> rolls
+    </div>
+    <div class="progress-bar" style="margin-top:8px;">
+      <div class="progress-fill" style="width:${oddPct}%;background:linear-gradient(90deg,#a855f7 0%,#3b82f6 100%);"></div>
+    </div>
+    <div class="flex-between text-xs text-muted" style="margin-top:4px;">
+      <span>ODD ${oddPct}%</span><span>EVEN ${evenPct}%</span>
+    </div>
+  `;
+
+  // ── 6. Streak Analysis ──
+  let streaks = [];
+  let curType = parities[0], curLen = 1;
+  for (let i = 1; i < parities.length; i++) {
+    if (parities[i] === curType) { curLen++; }
+    else { streaks.push({ type: curType, len: curLen }); curType = parities[i]; curLen = 1; }
+  }
+  streaks.push({ type: curType, len: curLen });
+
+  const oddStreaks = streaks.filter(s => s.type === 'odd');
+  const evenStreaks = streaks.filter(s => s.type === 'even');
+  const maxOddStreak = oddStreaks.length > 0 ? Math.max(...oddStreaks.map(s => s.len)) : 0;
+  const maxEvenStreak = evenStreaks.length > 0 ? Math.max(...evenStreaks.map(s => s.len)) : 0;
+  const avgOddStreak = oddStreaks.length > 0 ? (oddStreaks.reduce((a,s) => a+s.len, 0) / oddStreaks.length).toFixed(1) : '0';
+  const avgEvenStreak = evenStreaks.length > 0 ? (evenStreaks.reduce((a,s) => a+s.len, 0) / evenStreaks.length).toFixed(1) : '0';
+
+  // Current streak
+  const currentStreak = streaks[streaks.length - 1];
+  const csColor = currentStreak.type === 'odd' ? '#a855f7' : '#3b82f6';
+
+  let streakHtml = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div class="text-xs text-muted">Current Streak</div>
+      <div style="font-size:2rem;font-weight:900;color:${csColor};">${currentStreak.len}× ${currentStreak.type.toUpperCase()}</div>
+    </div>
+    <table><thead><tr><th></th><th style="color:#a855f7;">ODD</th><th style="color:#3b82f6;">EVEN</th></tr></thead><tbody>
+      <tr><td>Longest Streak</td><td class="fw-700">${maxOddStreak}</td><td class="fw-700">${maxEvenStreak}</td></tr>
+      <tr><td>Avg Streak</td><td>${avgOddStreak}</td><td>${avgEvenStreak}</td></tr>
+      <tr><td>Total Streaks</td><td>${oddStreaks.length}</td><td>${evenStreaks.length}</td></tr>
+    </tbody></table>
+  `;
+
+  // Last 10 streaks visual
+  const last10Streaks = streaks.slice(-10);
+  streakHtml += '<div class="text-xs text-muted" style="margin-top:12px;">Recent streaks:</div><div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">';
+  last10Streaks.forEach(s => {
+    const c = s.type === 'odd' ? '#a855f7' : '#3b82f6';
+    streakHtml += `<span style="padding:3px 8px;border-radius:8px;background:${c};color:#fff;font-size:0.7rem;font-weight:700;">${s.len}${s.type === 'odd' ? 'O' : 'E'}</span>`;
+  });
+  streakHtml += '</div>';
+  document.getElementById('oe-streaks').innerHTML = streakHtml;
+
+  // ── 7. Parity Pattern Log (last 25) ──
+  const logSlice = parityHist.slice(-25).reverse();
+  let logHtml = '<table><thead><tr><th>Roll</th><th>Dice</th><th>Sum</th><th>Parity</th></tr></thead><tbody>';
+  logSlice.forEach((h, i) => {
+    const rollIdx = totalRolls - i;
+    const roll = rolls[rollIdx - 1];
+    const c = h.parity === 'odd' ? '#a855f7' : '#3b82f6';
+    logHtml += `<tr>
+      <td>#${rollIdx}</td>
+      <td>${roll.dice.join(', ')}</td>
+      <td class="fw-700">${h.sum}</td>
+      <td><span class="badge" style="background:${c};color:#fff;">${h.parity.toUpperCase()}</span></td>
+    </tr>`;
+  });
+  logHtml += '</tbody></table>';
+  document.getElementById('oe-log').innerHTML = logHtml;
+
+  // ── 8. Big/Small Prediction ──
+  const bsPred = predictBigSmall();
+  if (bsPred) {
+    const isBig = bsPred.prediction === 'big';
+    const bsColor = isBig ? '#f97316' : '#06b6d4';
+    const bsLabel = bsPred.prediction.toUpperCase();
+
+    const bsHist = getBigSmallHistory().slice(-12);
+    const bsDots = bsHist.map(h => {
+      const c = h.category === 'big' ? '#f97316' : '#06b6d4';
+      const l = h.category === 'big' ? 'B' : 'S';
+      return `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${c};color:#fff;font-size:0.65rem;line-height:22px;text-align:center;font-weight:700;">${l}</span>`;
+    }).join(' ');
+
+    document.getElementById('oe-bigsmall').innerHTML = `
+      <div style="font-size:2.4rem;font-weight:900;color:${bsColor};margin:12px 0 4px;">${bsLabel}</div>
+      <div style="font-size:1rem;color:var(--text-secondary);margin-bottom:8px;">Confidence: <strong>${bsPred.confidence}%</strong></div>
+      <div class="progress-bar mb-12" style="max-width:260px;margin:0 auto;"><div class="progress-fill" style="width:${bsPred.confidence}%;background:${bsColor};"></div></div>
+      <div class="text-xs" style="color:${bsColor};margin-bottom:10px;">${bsPred.streakMsg}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">${bsDots}</div>
+    `;
+  } else {
+    document.getElementById('oe-bigsmall').innerHTML = '<div class="text-sm text-muted">Insufficient data</div>';
+  }
+
+  // ── 9. Big vs Small Distribution ──
+  const bsAll = getBigSmallHistory();
+  const bigCount = bsAll.filter(h => h.category === 'big').length;
+  const smallCount = bsAll.length - bigCount;
+  const maxBS = Math.max(bigCount, smallCount, 1);
+  const bigPct = (bigCount / bsAll.length * 100).toFixed(1);
+  const smallPct = (smallCount / bsAll.length * 100).toFixed(1);
+
+  document.getElementById('oe-bs-dist').innerHTML = `
+    <div class="sum-bar-container">
+      <div class="sum-bar-label"><span style="color:#f97316;font-weight:700;">BIG (≥11)</span><span>${bigCount} (${bigPct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${bigCount/maxBS*100}%;background:#f97316;">${bigCount}</div></div>
+    </div>
+    <div class="sum-bar-container" style="margin-top:8px;">
+      <div class="sum-bar-label"><span style="color:#06b6d4;font-weight:700;">SMALL (≤10)</span><span>${smallCount} (${smallPct}%)</span></div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${smallCount/maxBS*100}%;background:#06b6d4;">${smallCount}</div></div>
+    </div>
+    <div class="text-xs text-muted" style="margin-top:12px;">
+      Ratio: ${bigCount}:${smallCount} &nbsp;|&nbsp;
+      Deviation: <strong style="color:${Math.abs(bigCount - smallCount) > bsAll.length * 0.1 ? 'var(--red)' : 'var(--green)'};">${Math.abs(bigCount - smallCount)}</strong> rolls
+    </div>
+  `;
 }
 
 function renderPrediction() {
@@ -1598,6 +2258,9 @@ function renderPrediction() {
     document.getElementById('pred-all-scores').innerHTML = '<div class="text-sm text-muted">Waiting for prediction...</div>';
     document.getElementById('pred-breakdown').innerHTML = '';
     document.getElementById('pred-engines').innerHTML = '';
+    renderMonitor();
+    renderSumParityPrediction();
+    renderBigSmallPrediction();
     renderPredHistory();
     return;
   }
@@ -1634,7 +2297,7 @@ function renderPrediction() {
 
   // Breakdown
   if (pred.engines && pred.composite) {
-    const engineNames = { zscore:'Z-Score', markov:'Markov', ewma:'EWMA', entropy:'Entropy', bayes:'Bayes', chi:'Chi²', gap:'Gap' };
+    const engineNames = { zscore:'Z-Score', markov:'Markov', ewma:'EWMA', entropy:'Entropy', bayes:'Bayes', chi:'Chi²', gap:'Gap', parity:'Parity Bias' };
     const w = session.engineWeights;
     let bdHtml = '<table><thead><tr><th>Engine</th>';
     for (let n = 1; n <= 6; n++) bdHtml += `<th>${n}</th>`;
@@ -1667,7 +2330,7 @@ function renderPrediction() {
       contributions[eng] = (pred.engines[eng][pred.number] || 0) * (w[eng] || 1);
     }
     const sorted = Object.entries(contributions).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
-    const engineNames = { zscore:'Z-Score', markov:'Markov', ewma:'EWMA', entropy:'Entropy', bayes:'Bayes', chi:'Chi²', gap:'Gap' };
+    const engineNames = { zscore:'Z-Score', markov:'Markov', ewma:'EWMA', entropy:'Entropy', bayes:'Bayes', chi:'Chi²', gap:'Gap', parity:'Parity Bias' };
     const maxC = Math.max(...sorted.map(([,v]) => Math.abs(v)), 0.001);
     sorted.forEach(([eng, val]) => {
       const w = Math.abs(val) / maxC * 100;
@@ -1681,7 +2344,169 @@ function renderPrediction() {
     document.getElementById('pred-engines').innerHTML = engHtml;
   }
 
+  renderMonitor();
+  renderSumParityPrediction();
+  renderBigSmallPrediction();
   renderPredHistory();
+}
+
+function renderMonitor() {
+  const session = getSession();
+  const grid = document.getElementById('monitor-grid');
+  const activePred = session.predictions.find(p => !p.resolved);
+  const lastResolved = [...session.predictions].reverse().find(p => p.resolved);
+  const pred = activePred || lastResolved;
+
+  if (!pred || !pred.engines) {
+    grid.innerHTML = '<div class="text-sm text-muted">Waiting for prediction data…</div>';
+    return;
+  }
+
+  const engineDefs = [
+    { key:'zscore',  icon:'📊', name:'Z-Score' },
+    { key:'markov',  icon:'🔗', name:'Markov' },
+    { key:'ewma',    icon:'📈', name:'EWMA' },
+    { key:'entropy', icon:'🎲', name:'Entropy' },
+    { key:'bayes',   icon:'🧮', name:'Bayes' },
+    { key:'chi',     icon:'📐', name:'Chi²' },
+    { key:'gap',     icon:'⏱', name:'Gap' },
+    { key:'parity',  icon:'🔢', name:'Parity Bias' }
+  ];
+
+  const w = session.engineWeights;
+  const log = session.predictionLog;
+  const lastEntry = log.length > 0 ? log[log.length - 1] : null;
+
+  // Find engine with highest signal for predicted number
+  let maxEng = null, maxVal = -Infinity;
+  for (const eng of Object.keys(pred.engines)) {
+    const s = pred.engines[eng][pred.number] || 0;
+    if (s > maxVal) { maxVal = s; maxEng = eng; }
+  }
+
+  let html = '';
+  engineDefs.forEach(def => {
+    const engSignals = pred.engines[def.key] || {};
+
+    // Find the dice number this engine picks (highest signal)
+    let topNum = '–', topSig = -Infinity;
+    for (let n = 1; n <= 6; n++) {
+      const s = engSignals[n] || 0;
+      if (s > topSig) { topSig = s; topNum = n; }
+    }
+    // If all signals are zero or negative, show '–'
+    if (topSig <= 0) topNum = '–';
+
+    const sig = engSignals[pred.number] || 0;
+    const isActive = def.key === maxEng && maxVal > 0 && !!activePred;
+    let cls = 'monitor-card';
+    if (isActive) cls += ' mon-active';
+
+    // Last-resolved hit / miss decoration
+    if (lastEntry && lastResolved && lastResolved.engines && lastResolved.engines[def.key]) {
+      const lsig = lastResolved.engines[def.key][lastResolved.number] || 0;
+      if (lastEntry.hit && lsig > 0) cls += ' mon-correct';
+      if (!lastEntry.hit && lsig > 0) cls += ' mon-wrong';
+    }
+
+    const arrow = sig > 0.05 ? '▲' : sig < -0.05 ? '▼' : '–';
+
+    html += `<div class="${cls}">
+      <span class="mon-icon">${def.icon}</span>
+      <span class="mon-name">${def.name}</span>
+      <span class="mon-pick">${topNum}</span>
+      <span class="mon-signal">${sig.toFixed(3)} ${arrow}</span>
+      <span class="mon-weight">w ${(w[def.key]||1).toFixed(2)}</span>
+      <span class="mon-status">${isActive ? '🟢' : '⚪'}</span>
+    </div>`;
+  });
+
+  grid.innerHTML = html;
+}
+
+function renderSumParityPrediction() {
+  const el = document.getElementById('pred-parity-content');
+  const session = getSession();
+  if (session.rolls.length < 3) {
+    el.innerHTML = '<div class="text-sm text-muted">Need 3+ rolls</div>';
+    return;
+  }
+  const pred = predictSumParity();
+  if (!pred) { el.innerHTML = '<div class="text-sm text-muted">Insufficient data</div>'; return; }
+  const isOdd = pred.prediction === 'odd';
+  const color = isOdd ? '#a855f7' : '#3b82f6';
+
+  // Dot trail
+  const hist = getSumParityHistory().slice(-12);
+  let dots = hist.map(entry => {
+    const c = entry.parity === 'odd' ? '#a855f7' : '#3b82f6';
+    const lbl = entry.parity === 'odd' ? 'O' : 'E';
+    return `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${c};color:#fff;font-size:0.6rem;line-height:18px;text-align:center;">${lbl}</span>`;
+  }).join(' ');
+
+  // Streak message
+  let streakMsg = '';
+  const h = getSumParityHistory().map(e => e.parity);
+  if (h.length >= 3) {
+    const last = h[h.length - 1];
+    let streak = 0;
+    for (let i = h.length - 1; i >= 0 && h[i] === last; i--) streak++;
+    if (streak >= 3) streakMsg = `<div class="text-xs" style="color:${color};margin-top:6px;">${streak}\u00d7 ${last.toUpperCase()} streak \u2014 flip likely</div>`;
+  }
+
+  // Signal bar
+  const barW = pred.confidence;
+  el.innerHTML = `
+    <div style="font-size:1.5rem;font-weight:800;color:${color};margin-bottom:6px;">
+      ${pred.prediction.toUpperCase()} <span style="font-size:0.9rem;font-weight:600;">${pred.confidence}%</span>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;">${dots}</div>
+    ${streakMsg}
+    <div class="signal-bar" style="margin-top:8px;"><div class="signal-fill" style="width:${barW}%;background:${color};left:0;"></div></div>
+    <div class="text-xs text-muted" style="margin-top:4px;">EWMA + Streak + Bayes + Alternation</div>
+  `;
+}
+
+function renderBigSmallPrediction() {
+  const el = document.getElementById('pred-bigsmall-content');
+  const session = getSession();
+  if (session.rolls.length < 3) {
+    el.innerHTML = '<div class="text-sm text-muted">Need 3+ rolls</div>';
+    return;
+  }
+  const pred = predictBigSmall();
+  if (!pred) { el.innerHTML = '<div class="text-sm text-muted">Insufficient data</div>'; return; }
+  const isBig = pred.prediction === 'big';
+  const color = isBig ? '#f97316' : '#06b6d4';
+
+  // Dot trail
+  const hist = getBigSmallHistory().slice(-12);
+  let dots = hist.map(entry => {
+    const c = entry.category === 'big' ? '#f97316' : '#06b6d4';
+    const lbl = entry.category === 'big' ? 'B' : 'S';
+    return `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${c};color:#fff;font-size:0.6rem;line-height:18px;text-align:center;">${lbl}</span>`;
+  }).join(' ');
+
+  // Streak message
+  let streakMsg = '';
+  const h = getBigSmallHistory().map(e => e.category);
+  if (h.length >= 3) {
+    const last = h[h.length - 1];
+    let streak = 0;
+    for (let i = h.length - 1; i >= 0 && h[i] === last; i--) streak++;
+    if (streak >= 3) streakMsg = `<div class="text-xs" style="color:${color};margin-top:6px;">${streak}\u00d7 ${last.toUpperCase()} streak \u2014 revert likely</div>`;
+  }
+
+  const barW = pred.confidence;
+  el.innerHTML = `
+    <div style="font-size:1.5rem;font-weight:800;color:${color};margin-bottom:6px;">
+      ${pred.prediction.toUpperCase()} <span style="font-size:0.9rem;font-weight:600;">${pred.confidence}%</span>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;">${dots}</div>
+    ${streakMsg}
+    <div class="signal-bar" style="margin-top:8px;"><div class="signal-fill" style="width:${barW}%;background:${color};left:0;"></div></div>
+    <div class="text-xs text-muted" style="margin-top:4px;">EWMA on sum + Z-Score deviation</div>
+  `;
 }
 
 function renderPredHistory() {
